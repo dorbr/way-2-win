@@ -130,29 +130,60 @@ app.post('/api/options/ratio-history', async (req, res) => {
 
 // Scheduled Task: Calculate and Save Options Ratio daily at 9:45 AM ET (15 mins after market open)
 let lastRunDate = '';
+const TICKERS = [
+    'AAPL', 'ABNB', 'AMAT', 'AMD', 'AMZN', 'ANET', 'ASML', 'ASTS', 'AVGO', 'BABA',
+    'BKNG', 'CCL', 'CLS', 'COF', 'COST', 'DELL', 'EBAY', 'GLD', 'GOOGL', 'GS',
+    'HLT', 'HOOD', 'IBIT', 'IBKR', 'IBM', 'JPM', 'KKR', 'KO', 'LRCX', 'MAR',
+    'MCD', 'MO', 'MPWR', 'MSFT', 'MU', 'NBIS', 'NLR', 'NVDA', 'NVMI', 'NVO',
+    'OKLO', 'PANW', 'QCOM', 'QQQ', 'RCL', 'SMH', 'SMR', 'SOXL', 'SOXX', 'SPOT',
+    'SPY', 'TGT', 'TOL', 'TSLA', 'TSM', 'TXN', 'UAL', 'VGT', 'VST', 'WMT', 'XYZ'
+];
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper for scheduling logic (exported for testing)
+function shouldRunTask(etTime, etDate, lastRunDate, etWeekday) {
+    // Run at 09:45 AM ET
+    if (etTime !== "09:45") return false;
+
+    // Run only once per day
+    if (lastRunDate === etDate) return false;
+
+    // Skip weekends
+    if (etWeekday === 'Sat' || etWeekday === 'Sun') return false;
+
+    return true;
+}
 
 setInterval(async () => {
     const now = new Date();
     const etTime = now.toLocaleString("en-US", { timeZone: "America/New_York", hour12: false, hour: '2-digit', minute: '2-digit' });
     const etDate = now.toLocaleDateString("en-US", { timeZone: "America/New_York" });
+    const etWeekday = now.toLocaleString("en-US", { timeZone: "America/New_York", weekday: 'short' });
 
-    // Check if it's 09:45 AM ET and we haven't run yet today
-    if (etTime === "09:45" && lastRunDate !== etDate) {
+    if (shouldRunTask(etTime, etDate, lastRunDate, etWeekday)) {
         lastRunDate = etDate;
-        console.log(`[Scheduler] Running daily options ratio calculation for ${etDate} at ${etTime} ET...`);
-        try {
-            await calculateAndSaveOptionsRatio('AAPL');
-        } catch (error) {
-            console.error('[Scheduler] Error calculating options ratio:', error);
+        console.log(`[Scheduler] Starting daily options ratio calculation for ${etDate} (${etWeekday}) at ${etTime} ET...`);
+
+        for (const ticker of TICKERS) {
+            try {
+                console.log(`[Scheduler] Processing ${ticker}...`);
+                await calculateAndSaveOptionsRatio(ticker);
+                // Paid plan: minimal delay to be safe, but much faster than free tier.
+                await sleep(200);
+            } catch (error) {
+                console.error(`[Scheduler] Error calculating options ratio for ${ticker}:`, error.message);
+            }
         }
+        console.log('[Scheduler] Daily options ratio calculation completed.');
     }
 }, 60000); // Check every minute
 
-// Run once on startup for testing/demo purposes (optional, can remove if strict adherence to 9:45 is needed)
-// For now, let's keep it so the user sees data immediately, but maybe log it differently.
+// Run once on startup for testing/demo purposes (optional)
+// Just run for the first ticker to show it works without spamming
 setTimeout(() => {
-    console.log('[Scheduler] Initial startup calculation (demo)...');
-    calculateAndSaveOptionsRatio('AAPL').catch(e => console.error(e));
+    console.log('[Scheduler] Initial startup calculation (demo for first ticker)...');
+    calculateAndSaveOptionsRatio(TICKERS[0]).catch(e => console.error(e));
 }, 5000);
 
 function aggregateHistory(vixHist, fgHist, fedHist) {
@@ -231,3 +262,5 @@ app.post('/api/analyze', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+module.exports = { shouldRunTask };

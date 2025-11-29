@@ -106,7 +106,7 @@ module.exports = {
  * Calculates the Call/Put OI ratio for 5 strikes above and 5 below current price,
  * and saves it to history.
  */
-async function calculateAndSaveOptionsRatio(ticker = 'AAPL') {
+async function calculateAndSaveOptionsRatio(ticker = 'AAPL', dataFile = null) {
     try {
         // 1. Get Current Price
         const currentPrice = await fetchCurrentPrice(ticker);
@@ -193,10 +193,11 @@ async function calculateAndSaveOptionsRatio(ticker = 'AAPL') {
             strikesCount: count
         };
 
+        const targetFile = dataFile || DATA_FILE;
         let history = [];
-        if (fs.existsSync(DATA_FILE)) {
+        if (fs.existsSync(targetFile)) {
             try {
-                const fileContent = fs.readFileSync(DATA_FILE, 'utf8');
+                const fileContent = fs.readFileSync(targetFile, 'utf8');
                 history = JSON.parse(fileContent);
             } catch (e) {
                 console.error('Error reading history file, resetting:', e);
@@ -207,7 +208,7 @@ async function calculateAndSaveOptionsRatio(ticker = 'AAPL') {
         history.push(record);
 
         // Keep only last 30 days or so? For now keep all.
-        fs.writeFileSync(DATA_FILE, JSON.stringify(history, null, 2));
+        fs.writeFileSync(targetFile, JSON.stringify(history, null, 2));
 
         return history;
 
