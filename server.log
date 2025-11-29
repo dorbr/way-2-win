@@ -1,0 +1,19 @@
+
+> financial-dashboard@1.0.0 start
+> node server.js
+
+Server is running on http://localhost:3000
+[Scheduler] Initial startup calculation (demo)...
+[Options] Fetching data from: https://api.polygon.io/v3/snapshot/options/AAPL with params: { apiKey: 'REDACTED', limit: 250 }
+[Options] Fetched 250 records. Total: 250
+[Options] Fetched 250 records. Total: 500
+[Options] Fetched 250 records. Total: 750
+[Options] Fetched 250 records. Total: 1000
+[Options] Fetched 250 records. Total: 1250
+[Options] Fetched 250 records. Total: 1500
+[Options] Fetched 250 records. Total: 1750
+[Options] Fetched 250 records. Total: 2000
+[Options] Fetched 250 records. Total: 2250
+[Options] Fetched 250 records. Total: 2500
+[Options] Fetched 168 records. Total: 2668
+[Options] Total received 2668 option contracts for AAPL

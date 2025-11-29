@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="theme-color" content="#0f172a">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'card-bg': '#1e293b',
+                        'card-hover': '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-slate-900 text-white font-sans min-h-screen p-6">
+
+    <header class="mb-8 flex justify-between items-center max-w-7xl mx-auto">
+        <div>
+            <h1 class="text-3xl font-bold tracking-tight text-blue-400">Daily Market Dashboard</h1>
+            <p class="text-slate-400 text-sm mt-1">Latest financial & macro indicators</p>
+        </div>
+        <div class="text-right">
+            <div id="current-date" class="text-xl font-semibold">Loading...</div>
+            <div class="text-xs text-slate-500 mt-1">Last Updated: <span id="last-updated">--</span></div>
+        </div>
+    </header>
+
+    <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+
+        <!-- Card 1: CME FedWatch -->
+        <div
+            class="bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700 hover:border-blue-500 transition-colors">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-lg font-semibold text-slate-200">Fed Rate Probabilities</h2>
+                <span class="bg-blue-900 text-blue-200 text-xs px-2 py-1 rounded">CME FedWatch</span>
+            </div>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400">Meeting Date</span>
+                    <span id="fed-date" class="font-medium">--</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400">Current Target</span>
+                    <span id="fed-target" class="font-medium">--</span>
+                </div>
+                <div class="mt-4 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span>Cut Probability</span>
+                        <span id="fed-cut" class="text-green-400 font-bold">--%</span>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-2">
+                        <div id="fed-cut-bar" class="bg-green-500 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+
+                    <div class="flex justify-between text-sm">
+                        <span>No Change</span>
+                        <span id="fed-hold" class="text-yellow-400 font-bold">--%</span>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-2">
+                        <div id="fed-hold-bar" class="bg-yellow-500 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: VIX -->
+        <div
+            class="bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700 hover:border-purple-500 transition-colors">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-lg font-semibold text-slate-200">VIX Index</h2>
+                <span class="bg-purple-900 text-purple-200 text-xs px-2 py-1 rounded">Volatility</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 text-center">
+                <div class="bg-slate-800 p-3 rounded-lg">
+                    <div class="text-xs text-slate-400 mb-1">Open</div>
+                    <div id="vix-open" class="text-xl font-bold">--</div>
+                </div>
+                <div class="bg-slate-800 p-3 rounded-lg">
+                    <div class="text-xs text-slate-400 mb-1">Close/Latest</div>
+                    <div id="vix-close" class="text-xl font-bold text-purple-400">--</div>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-between items-center text-sm">
+                <span class="text-slate-400">Previous Close</span>
+                <span id="vix-prev" class="font-medium">--</span>
+            </div>
+        </div>
+
+        <!-- Card 3: Fear & Greed -->
+        <div
+            class="bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700 hover:border-orange-500 transition-colors">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-lg font-semibold text-slate-200">Fear & Greed</h2>
+                <span class="bg-orange-900 text-orange-200 text-xs px-2 py-1 rounded">Sentiment</span>
+            </div>
+            <div class="flex flex-col items-center justify-center py-2">
+                <div id="fg-value" class="text-5xl font-bold text-orange-500 mb-2">--</div>
+                <div id="fg-label" class="text-lg font-medium text-slate-300">--</div>
+            </div>
+            <div class="w-full bg-slate-700 rounded-full h-3 mt-4 relative">
+                <div id="fg-bar" class="bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 h-3 rounded-full"
+                    style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-500 mt-1">
+                <span>Fear</span>
+                <span>Greed</span>
+            </div>
+        </div>
+
+        <!-- Card 4: CPI -->
+        <div
+            class="bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700 hover:border-teal-500 transition-colors">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-lg font-semibold text-slate-200">CPI (Inflation)</h2>
+                <span class="bg-teal-900 text-teal-200 text-xs px-2 py-1 rounded">Consumer</span>
+            </div>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                    <span class="text-slate-400">Headline YoY</span>
+                    <span id="cpi-yoy" class="text-2xl font-bold text-teal-400">--%</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400">Headline MoM</span>
+                    <span id="cpi-mom" class="font-medium">--%</span>
+                </div>
+                <div class="text-xs text-slate-500 text-right mt-2">
+                    Released: <span id="cpi-date">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 5: PPI -->
+        <div
+            class="bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700 hover:border-cyan-500 transition-colors">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-lg font-semibold text-slate-200">PPI (Producer)</h2>
+                <span class="bg-cyan-900 text-cyan-200 text-xs px-2 py-1 rounded">Wholesale</span>
+            </div>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                    <span class="text-slate-400">Headline YoY</span>
+                    <span id="ppi-yoy" class="text-2xl font-bold text-cyan-400">--%</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400">Headline MoM</span>
+                    <span id="ppi-mom" class="font-medium">--%</span>
+                </div>
+                <div class="text-xs text-slate-500 text-right mt-2">
+                    Released: <span id="ppi-date">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 6: Jobless Claims -->
+        <div
+            class="bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700 hover:border-pink-500 transition-colors">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-lg font-semibold text-slate-200">Jobless Claims</h2>
+                <span class="bg-pink-900 text-pink-200 text-xs px-2 py-1 rounded">Labor</span>
+            </div>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                    <span class="text-slate-400">Initial Claims</span>
+                    <span id="claims-initial" class="text-2xl font-bold text-pink-400">--</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400">4-Week Avg</span>
+                    <span id="claims-avg" class="font-medium">--</span>
+                </div>
+                <div class="text-xs text-slate-500 text-right mt-2">
+                    Ref Week: <span id="claims-date">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historical Data Table -->
+        <div
+            class="col-span-1 md:col-span-2 lg:col-span-3 mt-8 bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700">
+            <h2 class="text-xl font-semibold text-slate-200 mb-4">Weekly Market Snapshot</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-slate-400 border-b border-slate-700">
+                            <th class="p-3">Date</th>
+                            <th class="p-3">VIX Open</th>
+                            <th class="p-3">VIX Close</th>
+                            <th class="p-3">F&G Open</th>
+                            <th class="p-3">F&G Close</th>
+                            <th class="p-3">Fed Cut Open</th>
+                            <th class="p-3">Fed Cut Close</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body" class="text-slate-300">
+                        <!-- Rows will be populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CPI History Section -->
+        <div
+            class="col-span-1 md:col-span-2 lg:col-span-3 mt-8 bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700">
+            <h2 class="text-xl font-semibold text-slate-200 mb-4">CPI History (YoY)</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="overflow-x-auto max-h-80 overflow-y-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-slate-400 border-b border-slate-700 sticky top-0 bg-card-bg">
+                                <th class="p-3">Date</th>
+                                <th class="p-3">Value (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cpi-table-body" class="text-slate-300">
+                            <!-- Rows will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="h-80">
+                    <canvas id="cpi-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- PPI History Section -->
+        <div
+            class="col-span-1 md:col-span-2 lg:col-span-3 mt-8 bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700">
+            <h2 class="text-xl font-semibold text-slate-200 mb-4">PPI History (YoY)</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="overflow-x-auto max-h-80 overflow-y-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-slate-400 border-b border-slate-700 sticky top-0 bg-card-bg">
+                                <th class="p-3">Date</th>
+                                <th class="p-3">Value (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ppi-table-body" class="text-slate-300">
+                            <!-- Rows will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="h-80">
+                    <canvas id="ppi-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Jobless Claims History Section -->
+        <div
+            class="col-span-1 md:col-span-2 lg:col-span-3 mt-8 bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700">
+            <h2 class="text-xl font-semibold text-slate-200 mb-4">Jobless Claims History</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="overflow-x-auto max-h-80 overflow-y-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-slate-400 border-b border-slate-700 sticky top-0 bg-card-bg">
+                                <th class="p-3">Date</th>
+                                <th class="p-3">Initial Claims</th>
+                            </tr>
+                        </thead>
+                        <tbody id="claims-table-body" class="text-slate-300">
+                            <!-- Rows will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="h-80">
+                    <canvas id="claims-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Combined Economic Indicators Graph -->
+        <div
+            class="col-span-1 md:col-span-2 lg:col-span-3 mt-8 bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-slate-200">Economic Indicators Comparison (YoY % Change)</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="stock-symbol" placeholder="Symbol (e.g. AAPL)"
+                        class="bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-32 p-2.5"
+                        value="^GSPC">
+                    <button id="update-stock-btn"
+                        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 focus:outline-none">
+                        Update
+                    </button>
+                </div>
+            </div>
+            <div class="h-96">
+                <canvas id="macro-comparison-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Options Open Interest Section -->
+        <div
+            class="col-span-1 md:col-span-2 lg:col-span-3 mt-8 bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-slate-200">Options Open Interest</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="options-ticker" placeholder="Ticker (e.g. AAPL)"
+                        class="bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-32 p-2.5"
+                        value="AAPL">
+                    <input type="date" id="options-date"
+                        class="bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-2.5">
+                    <button id="fetch-options-btn"
+                        class="text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm px-4 py-2 focus:outline-none">
+                        Fetch
+                    </button>
+                </div>
+            </div>
+            <div class="h-96">
+                <canvas id="options-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Options Call/Put Ratio Section -->
+        <div
+            class="col-span-1 md:col-span-2 lg:col-span-3 mt-8 bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-slate-200">Call/Put Open Interest Ratio by Strike</h2>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-slate-400 border-b border-slate-700 sticky top-0 bg-card-bg">
+                                <th class="p-3">Strike Price</th>
+                                <th class="p-3">Call/Put Ratio</th>
+                                <th class="p-3">Total OI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="options-ratio-table-body" class="text-slate-300">
+                            <!-- Rows will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="h-96">
+                    <canvas id="options-ratio-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Options Call/Put Ratio History Section -->
+        <div
+            class="col-span-1 md:col-span-2 lg:col-span-3 mt-8 bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-slate-200">Call/Put OI Ratio History (Avg of +/- 5 Strikes)</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="history-ticker" placeholder="Ticker (e.g. AAPL)"
+                        class="bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-32 p-2.5"
+                        value="AAPL">
+                    <button id="update-history-btn"
+                        class="text-white bg-pink-600 hover:bg-pink-700 focus:ring-4 focus:ring-pink-300 font-medium rounded-lg text-sm px-4 py-2 focus:outline-none">
+                        Update
+                    </button>
+                </div>
+            </div>
+            <div class="h-96">
+                <canvas id="options-ratio-history-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- AI Market Insight -->
+        <div
+            class="col-span-1 md:col-span-2 lg:col-span-3 mt-8 bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-6 shadow-lg border border-blue-500/30 relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 text-blue-400" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <div class="flex items-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400 mr-2" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+                <h2 class="text-xl font-semibold text-blue-100">AI Market Insight</h2>
+            </div>
+            <p id="ai-insight-text" class="text-slate-300 text-lg leading-relaxed italic">
+                Generating analysis...
+            </p>
+            <div class="mt-4 text-xs text-slate-500">
+                Powered by OpenAI
+            </div>
+        </div>
+
+    </main>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
