@@ -115,11 +115,16 @@ app.post('/api/options/ratio-history', async (req, res) => {
         }
 
         console.log(`[Manual] Calculating options ratio for ${ticker}...`);
-        await calculateAndSaveOptionsRatio(ticker);
+        // Calculate but DO NOT save to file (pass false as 3rd arg)
+        const currentRecord = await calculateAndSaveOptionsRatio(ticker, null, false);
 
-        // Return updated history for this ticker
+        // Return updated history for this ticker (history from file + current record)
         let history = getOptionsRatioHistory();
         history = history.filter(item => item.ticker === ticker.toUpperCase());
+
+        if (currentRecord) {
+            history.push(currentRecord);
+        }
 
         res.json(history);
     } catch (error) {
@@ -181,10 +186,13 @@ setInterval(async () => {
 
 // Run once on startup for testing/demo purposes (optional)
 // Just run for the first ticker to show it works without spamming
+// DISABLED to prevent polluting history file with non-market-open data
+/*
 setTimeout(() => {
     console.log('[Scheduler] Initial startup calculation (demo for first ticker)...');
     calculateAndSaveOptionsRatio(TICKERS[0]).catch(e => console.error(e));
 }, 5000);
+*/
 
 function aggregateHistory(vixHist, fgHist, fedHist) {
     // Create a map by date to merge data
@@ -259,8 +267,10 @@ app.post('/api/analyze', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+    });
+}
 
 module.exports = { shouldRunTask };

@@ -106,7 +106,7 @@ module.exports = {
  * Calculates the Call/Put OI ratio for 5 strikes above and 5 below current price,
  * and saves it to history.
  */
-async function calculateAndSaveOptionsRatio(ticker = 'AAPL', dataFile = null) {
+async function calculateAndSaveOptionsRatio(ticker = 'AAPL', dataFile = null, shouldSave = true) {
     try {
         // 1. Get Current Price
         const currentPrice = await fetchCurrentPrice(ticker);
@@ -184,7 +184,7 @@ async function calculateAndSaveOptionsRatio(ticker = 'AAPL', dataFile = null) {
 
         const avgRatio = count > 0 ? totalRatio / count : 0;
 
-        // 7. Save to File
+        // 7. Save to File (if requested)
         const record = {
             timestamp: new Date().toISOString(),
             ticker,
@@ -193,24 +193,32 @@ async function calculateAndSaveOptionsRatio(ticker = 'AAPL', dataFile = null) {
             strikesCount: count
         };
 
-        const targetFile = dataFile || DATA_FILE;
-        let history = [];
-        if (fs.existsSync(targetFile)) {
-            try {
-                const fileContent = fs.readFileSync(targetFile, 'utf8');
-                history = JSON.parse(fileContent);
-            } catch (e) {
-                console.error('Error reading history file, resetting:', e);
-                history = [];
+        if (shouldSave) {
+            const targetFile = dataFile || DATA_FILE;
+            let history = [];
+            if (fs.existsSync(targetFile)) {
+                try {
+                    const fileContent = fs.readFileSync(targetFile, 'utf8');
+                    history = JSON.parse(fileContent);
+                } catch (e) {
+                    console.error('Error reading history file, resetting:', e);
+                    history = [];
+                }
             }
+
+            history.push(record);
+
+            // Keep only last 30 days or so? For now keep all.
+            // Ensure directory exists
+            const dir = path.dirname(targetFile);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+
+            fs.writeFileSync(targetFile, JSON.stringify(history, null, 2));
         }
 
-        history.push(record);
-
-        // Keep only last 30 days or so? For now keep all.
-        fs.writeFileSync(targetFile, JSON.stringify(history, null, 2));
-
-        return history;
+        return record;
 
     } catch (error) {
         console.error('Error calculating options ratio:', error);

@@ -42,6 +42,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     fetchOptionsRatioHistory('AAPL');
+
+    // Initial fetch for Options Open Interest (SPY)
+    fetchOptionsData('SPY');
+
+    // Debounce function
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Auto-fetch options on ticker input
+    const optionsTickerInput = document.getElementById('options-ticker');
+    optionsTickerInput.addEventListener('input', debounce(async (e) => {
+        const ticker = e.target.value.toUpperCase();
+        if (ticker && ticker.length >= 1) {
+            await fetchOptionsData(ticker);
+        }
+    }, 1000)); // 1 second debounce
 });
 
 async function fetchDashboardData() {
@@ -693,20 +718,28 @@ function renderInsight(insightText) {
     }
 }
 
+let currentOptionsData = [];
+
+document.getElementById('options-date').addEventListener('change', () => {
+    const selectedDate = document.getElementById('options-date').value;
+    if (selectedDate && currentOptionsData.length > 0) {
+        const filteredData = currentOptionsData.filter(d => d.details.expiration_date === selectedDate);
+        renderOptionsChart(filteredData, document.getElementById('options-ticker').value);
+        renderOptionsRatioChart(filteredData, document.getElementById('options-ticker').value);
+    }
+});
+
 async function fetchOptionsData(ticker) {
     const btn = document.getElementById('fetch-options-btn');
-    const dateInput = document.getElementById('options-date');
-    const expirationDate = dateInput.value;
+    const dateSelect = document.getElementById('options-date');
 
     const originalText = btn.textContent;
     btn.textContent = 'Loading...';
     btn.disabled = true;
 
     try {
+        // Always fetch ALL data to get available dates
         let url = `/api/options?ticker=${encodeURIComponent(ticker)}`;
-        if (expirationDate) {
-            url += `&expirationDate=${encodeURIComponent(expirationDate)}`;
-        }
 
         const response = await fetch(url);
         const data = await response.json();
@@ -716,8 +749,36 @@ async function fetchOptionsData(ticker) {
             return;
         }
 
-        renderOptionsChart(data, ticker);
-        renderOptionsRatioChart(data, ticker);
+        currentOptionsData = data;
+
+        // Extract unique expiration dates
+        const dates = [...new Set(data.map(d => d.details.expiration_date))].sort();
+
+        // Populate dropdown
+        dateSelect.innerHTML = '';
+        if (dates.length === 0) {
+            const option = document.createElement('option');
+            option.text = "No dates found";
+            dateSelect.add(option);
+            return; // No data to render
+        }
+
+        dates.forEach(date => {
+            const option = document.createElement('option');
+            option.value = date;
+            option.text = date;
+            dateSelect.add(option);
+        });
+
+        // Select nearest date (first one)
+        dateSelect.selectedIndex = 0;
+        const nearestDate = dates[0];
+
+        // Filter data for nearest date
+        const filteredData = data.filter(d => d.details.expiration_date === nearestDate);
+
+        renderOptionsChart(filteredData, ticker);
+        renderOptionsRatioChart(filteredData, ticker);
 
     } catch (error) {
         console.error('Error fetching options data:', error);
