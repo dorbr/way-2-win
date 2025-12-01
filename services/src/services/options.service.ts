@@ -171,11 +171,45 @@ export async function calculateAndSaveOptionsRatio(ticker: string = 'AAPL', data
             }
         });
 
+        /**
+         * Helper to find the latest timestamp from a list of options.
+         * Checks day bar, last quote, and last trade.
+         */
+        function getLatestOptionTimestamp(options: any[]): string | null {
+            let maxTs = 0;
+            for (const opt of options) {
+                let ts = 0;
+                // Check day bar (milliseconds)
+                if (opt.day && opt.day.t) {
+                    ts = opt.day.t;
+                }
+                // Check last quote (nanoseconds)
+                else if (opt.last_quote && opt.last_quote.sip_timestamp) {
+                    ts = opt.last_quote.sip_timestamp / 1000000;
+                }
+                // Check last trade (nanoseconds)
+                else if (opt.last_trade && opt.last_trade.sip_timestamp) {
+                    ts = opt.last_trade.sip_timestamp / 1000000;
+                }
+
+                if (ts > maxTs) {
+                    maxTs = ts;
+                }
+            }
+
+            if (maxTs > 0) {
+                return new Date(maxTs).toISOString();
+            }
+            return null;
+        }
+
         const avgRatio = count > 0 ? totalRatio / count : 0;
 
         // 7. Save to DB (if requested)
+        // Use the latest timestamp from the data if available, otherwise use current time.
+        const dataTimestamp = getLatestOptionTimestamp(options);
         const record = {
-            timestamp: new Date().toISOString(),
+            timestamp: dataTimestamp || new Date().toISOString(),
             ticker,
             price: currentPrice,
             ratio: avgRatio,
@@ -187,10 +221,13 @@ export async function calculateAndSaveOptionsRatio(ticker: string = 'AAPL', data
                 await prisma.optionsRatioHistory.create({
                     data: {
                         timestamp: record.timestamp,
-                        ticker: record.ticker,
+                        ticker: record.ticker, // Keep the string field for legacy/redundancy if needed, or just rely on relation
                         price: record.price,
                         ratio: record.ratio,
-                        strikesCount: record.strikesCount
+                        strikesCount: record.strikesCount,
+                        tickerRel: {
+                            connect: { symbol: ticker }
+                        }
                     }
                 });
                 console.log(`[Options] Saved ratio for ${ticker} to DB.`);

@@ -10,6 +10,13 @@ const FearGreedCard = ({ data }) => {
     else if (data.value < 75) valueClass += "text-green-400";
     else valueClass += "text-green-600";
 
+    let barColorClass = "h-3 rounded-full ";
+    if (data.value < 25) barColorClass += "bg-red-600";
+    else if (data.value < 45) barColorClass += "bg-red-400";
+    else if (data.value < 55) barColorClass += "bg-yellow-400";
+    else if (data.value < 75) barColorClass += "bg-green-400";
+    else barColorClass += "bg-green-600";
+
     return (
         <div className="bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700 hover:border-orange-500 transition-colors">
             <div className="flex justify-between items-start mb-4">
@@ -21,7 +28,7 @@ const FearGreedCard = ({ data }) => {
                 <div className="text-lg font-medium text-slate-300">{data.label}</div>
             </div>
             <div className="w-full bg-slate-700 rounded-full h-3 mt-4 relative">
-                <div className="bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 h-3 rounded-full"
+                <div className={barColorClass}
                     style={{ width: `${data.value}%` }}></div>
             </div>
             <div className="flex justify-between text-xs text-slate-500 mt-1">

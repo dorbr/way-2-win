@@ -41,22 +41,29 @@ export const addTicker = async (req: Request, res: Response) => {
     }
 };
 
-export const deleteTicker = async (req: Request, res: Response) => {
+export const toggleTickerStatus = async (req: Request, res: Response) => {
     try {
         const { symbol } = req.params;
+        const { isActive } = req.body;
+
         if (!symbol) {
             return res.status(400).json({ error: 'Symbol is required' });
         }
 
+        if (typeof isActive !== 'boolean') {
+            return res.status(400).json({ error: 'isActive status is required and must be a boolean' });
+        }
+
         const upperSymbol = symbol.toUpperCase();
 
-        await prisma.ticker.delete({
-            where: { symbol: upperSymbol }
+        const updatedTicker = await prisma.ticker.update({
+            where: { symbol: upperSymbol },
+            data: { isActive }
         });
 
-        res.json({ message: 'Ticker deleted successfully' });
+        res.json(updatedTicker);
     } catch (error) {
-        console.error('Error deleting ticker:', error);
-        res.status(500).json({ error: 'Failed to delete ticker' });
+        console.error('Error updating ticker status:', error);
+        res.status(500).json({ error: 'Failed to update ticker status' });
     }
 };

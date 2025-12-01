@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { getTickers, addTicker, deleteTicker } from '../controllers/ticker.controller';
+import { getTickers, addTicker, toggleTickerStatus } from '../controllers/ticker.controller';
 
 const router = Router();
 
 router.get('/', getTickers);
 router.post('/', addTicker);
-router.delete('/:symbol', deleteTicker);
+router.patch('/:symbol/status', toggleTickerStatus);
 
 export default router;

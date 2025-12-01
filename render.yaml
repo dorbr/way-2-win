@@ -21,3 +21,23 @@ services:
         sync: false
       - key: NPM_CONFIG_PRODUCTION
         value: "false"
+
+cronJobs:
+  - name: daily-options-update
+    env: node
+    plan: starter
+    schedule: "45 13,14 * * 1-5"
+    command: cd services && npm run update-options
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: POLYGON_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: MACRO_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"

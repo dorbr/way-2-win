@@ -10,11 +10,13 @@ datasource db {
 }
 
 model Ticker {
-  id        Int                   @id @default(autoincrement())
-  symbol    String                @unique
-  name      String?
-  history   OptionsRatioHistory[]
-  createdAt DateTime              @default(now()) @map("created_at")
+  id          Int                   @id @default(autoincrement())
+  symbol      String                @unique
+  name        String?
+  history     OptionsRatioHistory[]
+  isActive    Boolean               @default(true) @map("is_active")
+  lastUpdated DateTime              @default(now()) @map("last_updated")
+  createdAt   DateTime              @default(now()) @map("created_at")
 
   @@map("tickers")
 }

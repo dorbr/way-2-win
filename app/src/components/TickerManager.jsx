@@ -41,15 +41,15 @@ const TickerManager = ({ isOpen, onClose }) => {
         }
     };
 
-    const handleDeleteTicker = async (symbol) => {
-        if (!window.confirm(`Are you sure you want to delete ${symbol}?`)) return;
-
+    const handleToggleStatus = async (ticker) => {
         try {
-            await axios.delete(`/api/tickers/${symbol}`);
-            setTickers(tickers.filter(t => t.symbol !== symbol));
+            const newStatus = !ticker.isActive;
+            const response = await axios.patch(`/api/tickers/${ticker.symbol}/status`, { isActive: newStatus });
+            setTickers(tickers.map(t => t.symbol === ticker.symbol ? { ...t, isActive: newStatus } : t));
             setError('');
         } catch (err) {
-            setError('Failed to delete ticker');
+            setError('Failed to update ticker status');
+            console.error(err);
         }
     };
 
@@ -93,10 +93,13 @@ const TickerManager = ({ isOpen, onClose }) => {
                                 <li key={ticker.id} className="flex justify-between items-center p-3 hover:bg-slate-800/50">
                                     <span className="text-white font-medium">{ticker.symbol}</span>
                                     <button
-                                        onClick={() => handleDeleteTicker(ticker.symbol)}
-                                        className="text-red-400 hover:text-red-300 text-sm px-2 py-1 rounded hover:bg-red-500/10"
+                                        onClick={() => handleToggleStatus(ticker)}
+                                        className={`px-3 py-1 rounded text-sm font-medium transition-colors ${ticker.isActive
+                                                ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
+                                                : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                                            }`}
                                     >
-                                        Delete
+                                        {ticker.isActive ? 'Active' : 'Disabled'}
                                     </button>
                                 </li>
                             ))}

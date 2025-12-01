@@ -7,7 +7,11 @@
     "start": "ts-node src/server.ts",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "npx prisma generate && tsc",
-    "start:prod": "node dist/server.js"
+    "start:prod": "node dist/server.js",
+    "update-options": "node dist/scripts/run-daily-options.js",
+    "clear-db": "ts-node src/scripts/clear-db.ts",
+    "seed-tickers": "ts-node src/scripts/seed-tickers.ts",
+    "verify-data": "ts-node src/scripts/verify-data.ts"
   },
   "engines": {
     "node": ">=18.0.0"
