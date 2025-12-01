@@ -2,16 +2,16 @@ import axios from 'axios';
 
 interface StockData {
     symbol: string;
-    history: { date: string; close: number }[];
+    history: { date: string; close: number; volume: number }[];
     close?: number; // Added for convenience in insights
 }
 
-export async function fetchStockData(symbol: string = '^GSPC', interval: '1d' | '1wk' | '1mo' = '1mo'): Promise<StockData> {
+export async function fetchStockData(symbol: string = '^GSPC', interval: '1d' | '1wk' | '1mo' = '1mo', range: string = '2y'): Promise<StockData> {
     try {
         // Yahoo Finance API
         // interval defaults to 1mo, but can be 1d or 1wk
-        // range=2y to ensure we have enough history
-        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=2y`;
+        // range defaults to 2y
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}`;
 
         const response = await axios.get(url, {
             headers: {
@@ -23,13 +23,14 @@ export async function fetchStockData(symbol: string = '^GSPC', interval: '1d' | 
         const timestamps = result.timestamp;
         const quotes = result.indicators.quote[0];
 
-        let history: { date: string; close: number }[] = [];
+        let history: { date: string; close: number; volume: number }[] = [];
         if (timestamps && quotes && quotes.close) {
             for (let i = 0; i < timestamps.length; i++) {
                 if (quotes.close[i] !== null) {
                     history.push({
                         date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
-                        close: quotes.close[i]
+                        close: quotes.close[i],
+                        volume: quotes.volume ? quotes.volume[i] : 0
                     });
                 }
             }
@@ -56,14 +57,15 @@ export async function fetchStockData(symbol: string = '^GSPC', interval: '1d' | 
 
 function getMockSP500Data(): StockData {
     // Generate mock monthly data for 2 years
-    const history: { date: string; close: number }[] = [];
+    const history: { date: string; close: number; volume: number }[] = [];
     let price = 5800;
     const date = new Date();
 
     for (let i = 0; i < 24; i++) {
         history.push({
             date: date.toISOString().split('T')[0],
-            close: price
+            close: price,
+            volume: 1000000 + Math.random() * 500000
         });
         // Go back 1 month
         date.setMonth(date.getMonth() - 1);

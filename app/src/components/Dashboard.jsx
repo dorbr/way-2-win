@@ -13,6 +13,7 @@ import OptionsHistorySection from './OptionsHistorySection';
 import AIInsight from './AIInsight';
 import MacroBetaSection from './MacroBetaSection';
 import AssetCorrelationSection from './AssetCorrelationSection';
+import StockVolumeChart from './StockVolumeChart';
 
 const Dashboard = () => {
     const [data, setData] = useState(null);
@@ -111,6 +112,7 @@ const Dashboard = () => {
 
                 <MacroBetaSection />
                 <AssetCorrelationSection />
+                <StockVolumeChart />
 
                 <OptionsSection />
                 <OptionsHistorySection />
