@@ -13,3 +13,9 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: MACRO_API_KEY
+        sync: false
+      - key: PORT
+        sync: false
+      - key: DATABASE_URL
+        sync: false
