@@ -6,6 +6,11 @@ import { PrismaClient } from '@prisma/client';
 dotenv.config();
 
 const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+    console.error('ERROR: DATABASE_URL environment variable is not defined.');
+}
+
 const pool = new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false }

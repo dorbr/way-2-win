@@ -36,17 +36,17 @@ async function run() {
             process.exit(0);
         }
 
-        // Check time window: 09:40 to 09:55 ET
+        // Check time window: 09:25 to 10:05 ET (20 minutes +/- around 09:45)
         // We want to run at 09:45 ET. The cron runs at 13:45 UTC and 14:45 UTC.
         // One of these will be 09:45 ET depending on DST.
         const [hour, minute] = etTime.split(':').map(Number);
         const timeInMinutes = hour * 60 + minute;
         const targetTime = 9 * 60 + 45; // 09:45
-        const windowStart = targetTime - 5; // 09:40
-        const windowEnd = targetTime + 10; // 09:55
+        const windowStart = targetTime - 20; // 09:25
+        const windowEnd = targetTime + 20; // 10:05
 
         if (timeInMinutes < windowStart || timeInMinutes > windowEnd) {
-            console.log(`[Scheduler] Current ET time ${etTime} is outside the target window (09:40-09:55). Skipping task.`);
+            console.log(`[Scheduler] Current ET time ${etTime} is outside the target window (09:25-10:05). Skipping task.`);
             process.exit(0);
         }
     }
