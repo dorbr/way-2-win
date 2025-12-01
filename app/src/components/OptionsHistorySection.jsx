@@ -23,7 +23,7 @@ const OptionsHistorySection = () => {
     const updateHistory = async () => {
         setLoading(true);
         try {
-            const response = await axios.post('/api/options/ratio-history', { ticker });
+            const response = await axios.get(`/api/options/ratio-history?ticker=${encodeURIComponent(ticker)}`);
             if (response.data.error) {
                 alert('Error updating options ratio history: ' + response.data.error);
                 return;
@@ -88,7 +88,7 @@ const OptionsHistorySection = () => {
                         disabled={loading}
                         className="text-white bg-pink-600 hover:bg-pink-700 focus:ring-4 focus:ring-pink-300 font-medium rounded-lg text-sm px-4 py-2 focus:outline-none disabled:opacity-50"
                     >
-                        {loading ? 'Updating...' : 'Update'}
+                        {loading ? 'Refreshing...' : 'Refresh'}
                     </button>
                 </div>
             </div>
