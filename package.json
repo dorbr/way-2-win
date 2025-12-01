@@ -1,23 +1,16 @@
 {
-  "name": "financial-dashboard",
-  "version": "1.0.0",
-  "description": "Daily financial and macroeconomic dashboard",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "dependencies": {
-    "axios": "^1.6.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.0",
-    "express": "^4.18.0",
-    "openai": "^6.9.1",
-    "yahoo-finance2": "^3.10.2"
-  },
-  "author": "",
-  "license": "ISC"
+    "name": "the-way-2-win-root",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "dev": "npx concurrently \"npm run dev --prefix services\" \"npm run dev --prefix app\"",
+        "dev:services": "npm run dev --prefix services",
+        "dev:app": "npm run dev --prefix app",
+        "install:all": "npm install && npm install --prefix services && npm install --prefix app",
+        "build": "npm run build --prefix app && npm run build --prefix services",
+        "start": "npm run start:prod --prefix services"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    }
 }

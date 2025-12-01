@@ -1,0 +1,38 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Ticker {
+  id        Int                   @id @default(autoincrement())
+  symbol    String                @unique
+  name      String?
+  history   OptionsRatioHistory[]
+  createdAt DateTime              @default(now()) @map("created_at")
+
+  @@map("tickers")
+}
+
+model OptionsRatioHistory {
+  id        Int      @id @default(autoincrement())
+  timestamp DateTime @default(now())
+
+  tickerId  Int?    @map("ticker_id")
+  tickerRel Ticker? @relation(fields: [tickerId], references: [id])
+
+  ticker       String
+  price        Decimal  @db.Decimal(10, 2)
+  ratio        Decimal  @db.Decimal(10, 4)
+  strikesCount Int      @map("strikes_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([ticker, timestamp])
+  @@index([tickerId, timestamp])
+  @@map("options_ratio_history")
+}
