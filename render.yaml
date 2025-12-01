@@ -27,7 +27,7 @@ services:
     env: node
     plan: starter
     schedule: "45 13,14 * * 1-5"
-    command: cd services && npm run update-options
+    startCommand: cd services && npm run update-options
     envVars:
       - key: NODE_VERSION
         value: 22.12.0
