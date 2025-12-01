@@ -22,8 +22,8 @@ services:
       - key: NPM_CONFIG_PRODUCTION
         value: "false"
 
-cronJobs:
-  - name: daily-options-update
+  - type: cron
+    name: daily-options-update
     env: node
     plan: starter
     schedule: "45 13,14 * * 1-5"
