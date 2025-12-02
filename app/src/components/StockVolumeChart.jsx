@@ -177,6 +177,7 @@ const StockVolumeChart = () => {
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-slate-200">Price vs Relative Volume</h2>
                 <div className="flex gap-2 items-center">
+                    {stockData?.isMock && <span className="bg-yellow-900 text-yellow-200 text-xs px-2 py-1 rounded">Mock Data</span>}
                     <select
                         value={period}
                         onChange={(e) => setPeriod(Number(e.target.value))}

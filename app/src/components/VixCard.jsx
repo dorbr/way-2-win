@@ -7,7 +7,10 @@ const VixCard = ({ data }) => {
         <div className="bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700 hover:border-purple-500 transition-colors">
             <div className="flex justify-between items-start mb-4">
                 <h2 className="text-lg font-semibold text-slate-200">VIX Index</h2>
-                <span className="bg-purple-900 text-purple-200 text-xs px-2 py-1 rounded">Volatility</span>
+                <div className="flex gap-2">
+                    {data.isMock && <span className="bg-yellow-900 text-yellow-200 text-xs px-2 py-1 rounded">Mock Data</span>}
+                    <span className="bg-purple-900 text-purple-200 text-xs px-2 py-1 rounded">Volatility</span>
+                </div>
             </div>
             <div className="grid grid-cols-2 gap-4 text-center">
                 <div className="bg-slate-800 p-3 rounded-lg">

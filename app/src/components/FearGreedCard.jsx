@@ -21,7 +21,10 @@ const FearGreedCard = ({ data }) => {
         <div className="bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700 hover:border-orange-500 transition-colors">
             <div className="flex justify-between items-start mb-4">
                 <h2 className="text-lg font-semibold text-slate-200">Fear & Greed</h2>
-                <span className="bg-orange-900 text-orange-200 text-xs px-2 py-1 rounded">Sentiment</span>
+                <div className="flex gap-2">
+                    {data.isMock && <span className="bg-yellow-900 text-yellow-200 text-xs px-2 py-1 rounded">Mock Data</span>}
+                    <span className="bg-orange-900 text-orange-200 text-xs px-2 py-1 rounded">Sentiment</span>
+                </div>
             </div>
             <div className="flex flex-col items-center justify-center py-2">
                 <div className={valueClass}>{data.value}</div>

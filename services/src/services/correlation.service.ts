@@ -5,6 +5,7 @@ interface CorrelationResult {
     matrix: number[][];
     period: string;
     dataPoints: number;
+    isMock?: boolean;
 }
 
 function calculateCorrelation(x: number[], y: number[]): number {
@@ -119,6 +120,7 @@ export async function getAssetCorrelation(tickers: string[], months: number = 12
         tickers: results.map(r => r.symbol), // Use returned symbols to ensure correct casing/names
         matrix,
         period: `${months}m`,
-        dataPoints: commonDates.length
+        dataPoints: commonDates.length,
+        isMock: results.some(r => r.isMock)
     };
 }

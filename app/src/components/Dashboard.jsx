@@ -13,6 +13,7 @@ import AIInsight from './AIInsight';
 import MacroBetaSection from './MacroBetaSection';
 import AssetCorrelationSection from './AssetCorrelationSection';
 import StockVolumeChart from './StockVolumeChart';
+import StocksTabContent from './StocksTabContent';
 import Tabs from './Tabs';
 
 const Dashboard = () => {
@@ -127,6 +128,10 @@ const Dashboard = () => {
                             <StockVolumeChart />
                         </div>
                     )
+                },
+                {
+                    label: "Stocks",
+                    content: <StocksTabContent />
                 },
                 {
                     label: "Options",

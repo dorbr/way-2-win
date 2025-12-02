@@ -25,6 +25,7 @@ ChartJS.register(
 
 const MacroComparisonChart = ({ cpiData, ppiData, claimsData, sp500Data, onUpdateStock }) => {
     const [stockSymbol, setStockSymbol] = useState(sp500Data?.symbol || '^GSPC');
+    const isMock = cpiData?.isMock || ppiData?.isMock || claimsData?.isMock || sp500Data?.isMock;
 
     const chartData = useMemo(() => {
         if (!cpiData || !ppiData || !claimsData || !sp500Data) return null;
@@ -333,7 +334,8 @@ const MacroComparisonChart = ({ cpiData, ppiData, claimsData, sp500Data, onUpdat
         <div className="col-span-1 md:col-span-2 lg:col-span-3 mt-8 bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-slate-200">Economic Indicators Comparison (YoY % Change)</h2>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                    {isMock && <span className="bg-yellow-900 text-yellow-200 text-xs px-2 py-1 rounded">Mock Data</span>}
                     <input
                         type="text"
                         placeholder="Symbol (e.g. AAPL)"

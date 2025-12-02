@@ -7,6 +7,8 @@ const OptionsHistorySection = ({ ticker }) => {
     const [loading, setLoading] = useState(false);
 
     const fetchHistory = async (tickerToFetch) => {
+        setLoading(true);
+        setHistory([]);
         try {
             const response = await axios.get(`/api/options/ratio-history?ticker=${encodeURIComponent(tickerToFetch)}`);
             if (response.data.error) {
@@ -16,6 +18,8 @@ const OptionsHistorySection = ({ ticker }) => {
             setHistory(response.data);
         } catch (error) {
             console.error('Error fetching options ratio history:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -62,7 +66,12 @@ const OptionsHistorySection = ({ ticker }) => {
                 <div className="flex gap-2">
                 </div>
             </div>
-            <div className="h-96">
+            <div className="h-96 relative">
+                {loading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 z-10 rounded-lg">
+                        <div className="text-blue-400 font-semibold text-lg animate-pulse">Loading history...</div>
+                    </div>
+                )}
                 <Line data={chartData} options={options} />
             </div>
         </div>

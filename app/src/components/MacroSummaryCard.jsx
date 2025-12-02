@@ -25,7 +25,10 @@ const MacroSummaryCard = ({ title, tag, data, type, color }) => {
         <div className={`bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700 hover:border-${color}-500 transition-colors`}>
             <div className="flex justify-between items-start mb-4">
                 <h2 className="text-lg font-semibold text-slate-200">{title}</h2>
-                <span className={`bg-${color}-900 text-${color}-200 text-xs px-2 py-1 rounded`}>{tag}</span>
+                <div className="flex gap-2">
+                    {data.isMock && <span className="bg-yellow-900 text-yellow-200 text-xs px-2 py-1 rounded">Mock Data</span>}
+                    <span className={`bg-${color}-900 text-${color}-200 text-xs px-2 py-1 rounded`}>{tag}</span>
+                </div>
             </div>
             <div className="space-y-4">
                 <div className="flex justify-between items-center border-b border-slate-700 pb-2">

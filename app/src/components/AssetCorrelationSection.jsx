@@ -63,7 +63,10 @@ const AssetCorrelationSection = () => {
     return (
         <div className="col-span-1 md:col-span-2 lg:col-span-3 mt-8 mb-8">
             <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-slate-100">Asset Correlation Matrix</h2>
+                <div className="flex gap-2 items-center">
+                    <h2 className="text-xl font-bold text-slate-100">Asset Correlation Matrix</h2>
+                    {correlationData?.isMock && <span className="bg-yellow-900 text-yellow-200 text-xs px-2 py-1 rounded">Mock Data</span>}
+                </div>
 
                 <div className="flex flex-col md:flex-row items-center gap-4 mt-4 md:mt-0">
                     <div className="flex items-center space-x-4 bg-slate-800 p-3 rounded-lg">

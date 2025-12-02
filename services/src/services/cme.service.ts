@@ -8,6 +8,7 @@ interface CMEData {
     hikeProbability: number;
     lastUpdatedUtc: string;
     history?: any[];
+    isMock?: boolean;
 }
 
 export async function fetchCMEData(): Promise<CMEData> {
@@ -46,7 +47,8 @@ export async function fetchCMEData(): Promise<CMEData> {
             cutProbability: calculateProbability(nextMeeting.probabilities, 'cut'),
             noChangeProbability: calculateProbability(nextMeeting.probabilities, 'no_change'),
             hikeProbability: calculateProbability(nextMeeting.probabilities, 'hike'),
-            lastUpdatedUtc: new Date().toISOString() // Or from response if available
+            lastUpdatedUtc: new Date().toISOString(), // Or from response if available
+            isMock: false
         };
 
     } catch (error: any) {
@@ -76,7 +78,9 @@ function getMockCMEData(): CMEData {
             { date: "2025-11-27", cutProbability: 0.62 },
             { date: "2025-11-26", cutProbability: 0.60 },
             { date: "2025-11-25", cutProbability: 0.58 },
+            { date: "2025-11-24", cutProbability: 0.55 },
             { date: "2025-11-24", cutProbability: 0.55 }
-        ]
+        ],
+        isMock: true
     };
 }

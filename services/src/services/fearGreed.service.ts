@@ -5,6 +5,7 @@ interface FearGreedData {
     label: string;
     lastUpdatedUtc: string;
     history: any[];
+    isMock?: boolean;
 }
 
 export async function fetchFearGreedData(): Promise<FearGreedData> {
@@ -60,7 +61,8 @@ export async function fetchFearGreedData(): Promise<FearGreedData> {
             value: score,
             label: rating,
             lastUpdatedUtc: updated,
-            history: history
+            history: history,
+            isMock: false
         };
 
     } catch (error: any) {
@@ -94,7 +96,9 @@ function getMockFearGreedData(): FearGreedData {
             { date: "2025-11-27", value: 62, label: "Greed" },
             { date: "2025-11-26", value: 58, label: "Greed" },
             { date: "2025-11-25", value: 55, label: "Greed" },
+            { date: "2025-11-24", value: 50, label: "Neutral" },
             { date: "2025-11-24", value: 50, label: "Neutral" }
-        ]
+        ],
+        isMock: true
     };
 }

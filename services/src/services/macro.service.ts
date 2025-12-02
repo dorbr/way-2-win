@@ -13,18 +13,21 @@ interface MacroData {
         headlineMoM: number;
         releaseDate: string;
         history: FredObservation[];
+        isMock?: boolean;
     };
     ppi: {
         headlineYoY: number;
         headlineMoM: number;
         releaseDate: string;
         history: FredObservation[];
+        isMock?: boolean;
     };
     joblessClaims: {
         initialClaims: number;
         fourWeekAvg: number;
         referenceWeekEndDate: string;
         history: FredObservation[];
+        isMock?: boolean;
     };
 }
 
@@ -105,19 +108,22 @@ export async function fetchMacroData(): Promise<MacroData> {
                 headlineYoY: cpiYoY.value,
                 headlineMoM: cpiMoM.value,
                 releaseDate: cpiYoY.date,
-                history: cpiYoYHist // Array of { value, date }
+                history: cpiYoYHist, // Array of { value, date }
+                isMock: false
             },
             ppi: {
                 headlineYoY: ppiYoY.value,
                 headlineMoM: ppiMoM.value,
                 releaseDate: ppiYoY.date,
-                history: ppiYoYHist
+                history: ppiYoYHist,
+                isMock: false
             },
             joblessClaims: {
                 initialClaims: claims.value,
                 fourWeekAvg: claimsAvg.value,
                 referenceWeekEndDate: claims.date,
-                history: claimsHist
+                history: claimsHist,
+                isMock: false
             }
         };
         lastFetchTime = now;
@@ -153,19 +159,22 @@ function getMockMacroData(): MacroData {
             headlineYoY: 3.2,
             headlineMoM: 0.2,
             releaseDate: "2025-10-14",
-            history: generateHistory(3.2, 13, 30)
+            history: generateHistory(3.2, 13, 30),
+            isMock: true
         },
         ppi: {
             headlineYoY: 2.1,
             headlineMoM: 0.1,
             releaseDate: "2025-10-15",
-            history: generateHistory(2.1, 13, 30)
+            history: generateHistory(2.1, 13, 30),
+            isMock: true
         },
         joblessClaims: {
             initialClaims: 220000,
             fourWeekAvg: 215000,
             referenceWeekEndDate: "2025-11-22",
-            history: generateHistory(220000, 52, 7)
+            history: generateHistory(220000, 52, 7),
+            isMock: true
         }
     };
 }

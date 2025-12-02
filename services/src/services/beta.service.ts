@@ -6,6 +6,7 @@ interface BetaResult {
     correlation: number;
     dataPoints: { date: string; macroChange: number; spyChange: number }[];
     period: string;
+    isMock?: boolean;
 }
 
 function calculateCorrelation(x: number[], y: number[]): number {
@@ -117,6 +118,7 @@ export async function getMacroBeta(macroType: 'CPI' | 'JOBLESS', months: number 
         macroType,
         correlation,
         dataPoints,
-        period: `${months}m`
+        period: `${months}m`,
+        isMock: (macroType === 'CPI' ? macroData.cpi.isMock : macroData.joblessClaims.isMock) || spyData.isMock
     };
 }

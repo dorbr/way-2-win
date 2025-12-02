@@ -99,7 +99,10 @@ const MacroHistorySection = ({ title, data, valueLabel, color }) => {
 
     return (
         <div className="col-span-1 md:col-span-2 lg:col-span-3 mt-8 bg-card-bg rounded-xl p-6 shadow-lg border border-slate-700">
-            <h2 className="text-xl font-semibold text-slate-200 mb-4">{title}</h2>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-slate-200">{title}</h2>
+                {data.isMock && <span className="bg-yellow-900 text-yellow-200 text-xs px-2 py-1 rounded">Mock Data</span>}
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="overflow-x-auto max-h-80 overflow-y-auto">
                     <table className="w-full text-left border-collapse">

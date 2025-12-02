@@ -2,8 +2,9 @@ import axios from 'axios';
 
 interface StockData {
     symbol: string;
-    history: { date: string; close: number; volume: number }[];
+    history: { date: string; open: number; high: number; low: number; close: number; volume: number }[];
     close?: number; // Added for convenience in insights
+    isMock?: boolean;
 }
 
 export async function fetchStockData(symbol: string = '^GSPC', interval: '1d' | '1wk' | '1mo' = '1mo', range: string = '2y'): Promise<StockData> {
@@ -23,12 +24,15 @@ export async function fetchStockData(symbol: string = '^GSPC', interval: '1d' | 
         const timestamps = result.timestamp;
         const quotes = result.indicators.quote[0];
 
-        let history: { date: string; close: number; volume: number }[] = [];
+        let history: { date: string; open: number; high: number; low: number; close: number; volume: number }[] = [];
         if (timestamps && quotes && quotes.close) {
             for (let i = 0; i < timestamps.length; i++) {
                 if (quotes.close[i] !== null) {
                     history.push({
                         date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
+                        open: quotes.open ? quotes.open[i] : quotes.close[i],
+                        high: quotes.high ? quotes.high[i] : quotes.close[i],
+                        low: quotes.low ? quotes.low[i] : quotes.close[i],
                         close: quotes.close[i],
                         volume: quotes.volume ? quotes.volume[i] : 0
                     });
@@ -36,47 +40,59 @@ export async function fetchStockData(symbol: string = '^GSPC', interval: '1d' | 
             }
         }
 
-        // Sort descending by date
-        history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        // Sort ascending by date (required for charts)
+        history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
         return {
             symbol: symbol === '^GSPC' ? "S&P 500" : symbol.toUpperCase(),
             history: history,
-            close: history.length > 0 ? history[0].close : 0
+            close: history.length > 0 ? history[0].close : 0,
+            isMock: false
         };
 
     } catch (error: any) {
         console.error(`Error fetching data for ${symbol}:`, error.message);
-        // Only return mock data for S&P 500 fallback, otherwise throw or return empty
-        if (symbol === '^GSPC') {
-            return getMockSP500Data();
-        }
-        throw error;
+        // Fallback to mock data for any symbol if API fails (e.g. DNS issues)
+        return getMockSP500Data(symbol);
     }
 }
 
-function getMockSP500Data(): StockData {
+function getMockSP500Data(symbol: string = "S&P 500"): StockData {
     // Generate mock monthly data for 2 years
-    const history: { date: string; close: number; volume: number }[] = [];
+    const history: { date: string; open: number; high: number; low: number; close: number; volume: number }[] = [];
     let price = 5800;
     const date = new Date();
 
     for (let i = 0; i < 24; i++) {
+        const open = price;
+        const close = price * (1 - (Math.random() * 0.05 - 0.02)); // +/- 2%
+        const high = Math.max(open, close) * (1 + Math.random() * 0.01);
+        const low = Math.min(open, close) * (1 - Math.random() * 0.01);
+
         history.push({
             date: date.toISOString().split('T')[0],
-            close: price,
+            open,
+            high,
+            low,
+            close,
             volume: 1000000 + Math.random() * 500000
         });
+
+        price = close;
         // Go back 1 month
         date.setMonth(date.getMonth() - 1);
         // Random price change
         price = price * (1 - (Math.random() * 0.05 - 0.02)); // +/- 2%
     }
 
+    // Sort ascending by date
+    history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
     return {
-        symbol: "S&P 500",
+        symbol: symbol,
         history: history,
-        close: history[0].close
+        close: history[0].close,
+        isMock: true
     };
 }
 

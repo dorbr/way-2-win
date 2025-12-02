@@ -7,6 +7,7 @@ interface VIXData {
     todayClose: number;
     lastUpdatedUtc: string;
     history: any[];
+    isMock?: boolean;
 }
 
 export async function fetchVIXData(): Promise<VIXData> {
@@ -55,7 +56,8 @@ export async function fetchVIXData(): Promise<VIXData> {
             todayOpen: latest ? latest.open : meta.regularMarketPrice, // Fallback if history is delayed
             todayClose: latest ? latest.close : meta.regularMarketPrice,
             lastUpdatedUtc: new Date().toISOString(),
-            history: last5Days
+            history: last5Days,
+            isMock: false
         };
 
     } catch (error: any) {
@@ -76,7 +78,9 @@ function getMockVIXData(): VIXData {
             { date: "2025-11-27", open: 13.80, close: 14.23 },
             { date: "2025-11-26", open: 13.50, close: 13.90 },
             { date: "2025-11-25", open: 13.20, close: 13.60 },
+            { date: "2025-11-24", open: 13.00, close: 13.30 },
             { date: "2025-11-24", open: 13.00, close: 13.30 }
-        ]
+        ],
+        isMock: true
     };
 }

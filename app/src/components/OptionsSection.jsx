@@ -33,6 +33,11 @@ const OptionsSection = ({ ticker }) => {
 
     const fetchOptions = async (tickerToFetch) => {
         setLoading(true);
+        setAllData([]);
+        setFilteredData([]);
+        setDates([]);
+        setSelectedDate('');
+
         try {
             const response = await axios.get(`/api/options?ticker=${encodeURIComponent(tickerToFetch)}`);
             const data = response.data;
@@ -204,7 +209,12 @@ const OptionsSection = ({ ticker }) => {
                         </select>
                     </div>
                 </div>
-                <div className="h-96">
+                <div className="h-96 relative">
+                    {loading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 z-10 rounded-lg">
+                            <div className="text-blue-400 font-semibold text-lg animate-pulse">Loading options data...</div>
+                        </div>
+                    )}
                     {chartData && <Bar data={chartData} options={barOptions} />}
                 </div>
             </div>
@@ -242,7 +252,12 @@ const OptionsSection = ({ ticker }) => {
                             </tbody>
                         </table>
                     </div>
-                    <div className="h-96">
+                    <div className="h-96 relative">
+                        {loading && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 z-10 rounded-lg">
+                                <div className="text-blue-400 font-semibold text-lg animate-pulse">Loading ratio data...</div>
+                            </div>
+                        )}
                         {ratioChartData && <Line data={ratioChartData} options={lineOptions} />}
                     </div>
                 </div>
