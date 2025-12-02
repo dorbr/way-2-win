@@ -3,7 +3,7 @@ import { fetchOptionsOpenInterest, calculateAndSaveOptionsRatio, getOptionsRatio
 
 export const getOptionsData = async (req: Request, res: Response) => {
     try {
-        const ticker = req.query.ticker as string;
+        const ticker = (req.query.ticker as string)?.toUpperCase();
         const expirationDate = req.query.expirationDate as string;
 
         if (!ticker) {
@@ -21,11 +21,11 @@ export const getOptionsData = async (req: Request, res: Response) => {
 
 export const getRatioHistory = async (req: Request, res: Response) => {
     try {
-        const ticker = req.query.ticker as string;
+        const ticker = (req.query.ticker as string)?.toUpperCase();
         let history = await getOptionsRatioHistory();
 
         if (ticker) {
-            history = history.filter((item: any) => item.ticker === ticker.toUpperCase());
+            history = history.filter((item: any) => item.ticker === ticker);
         }
 
         res.json(history);
@@ -37,10 +37,11 @@ export const getRatioHistory = async (req: Request, res: Response) => {
 
 export const calculateRatio = async (req: Request, res: Response) => {
     try {
-        const { ticker } = req.body;
+        let { ticker } = req.body;
         if (!ticker) {
             return res.status(400).json({ error: 'Ticker is required' });
         }
+        ticker = ticker.toUpperCase();
 
         console.log(`[Manual] Calculating options ratio for ${ticker}...`);
         // Calculate but DO NOT save to file (pass false as 3rd arg)
@@ -48,7 +49,7 @@ export const calculateRatio = async (req: Request, res: Response) => {
 
         // Return updated history for this ticker (history from file + current record)
         let history = await getOptionsRatioHistory();
-        history = history.filter((item: any) => item.ticker === ticker.toUpperCase());
+        history = history.filter((item: any) => item.ticker === ticker);
 
         if (currentRecord) {
             history.push(currentRecord);

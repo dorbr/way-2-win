@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import axios from 'axios';
 
-const OptionsHistorySection = () => {
-    const [ticker, setTicker] = useState('AAPL');
+const OptionsHistorySection = ({ ticker }) => {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -20,26 +19,11 @@ const OptionsHistorySection = () => {
         }
     };
 
-    const updateHistory = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get(`/api/options/ratio-history?ticker=${encodeURIComponent(ticker)}`);
-            if (response.data.error) {
-                alert('Error updating options ratio history: ' + response.data.error);
-                return;
-            }
-            setHistory(response.data);
-        } catch (error) {
-            console.error('Error updating options ratio history:', error);
-            alert('Failed to update options ratio history.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
-        fetchHistory('AAPL');
-    }, []);
+        if (ticker) {
+            fetchHistory(ticker);
+        }
+    }, [ticker]);
 
     const chartData = {
         labels: history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).map(item =>
@@ -76,20 +60,6 @@ const OptionsHistorySection = () => {
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-slate-200">Call/Put OI Ratio History (Avg of +/- 5 Strikes)</h2>
                 <div className="flex gap-2">
-                    <input
-                        type="text"
-                        placeholder="Ticker (e.g. AAPL)"
-                        className="bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-32 p-2.5"
-                        value={ticker}
-                        onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                    />
-                    <button
-                        onClick={updateHistory}
-                        disabled={loading}
-                        className="text-white bg-pink-600 hover:bg-pink-700 focus:ring-4 focus:ring-pink-300 font-medium rounded-lg text-sm px-4 py-2 focus:outline-none disabled:opacity-50"
-                    >
-                        {loading ? 'Refreshing...' : 'Refresh'}
-                    </button>
                 </div>
             </div>
             <div className="h-96">

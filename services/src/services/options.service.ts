@@ -12,6 +12,7 @@ const BASE_URL = 'https://api.polygon.io/v3/snapshot/options';
  * @returns {Promise<Object>} - The options data.
  */
 export async function fetchOptionsOpenInterest(ticker: string, expirationDate?: string): Promise<any[]> {
+    ticker = ticker.toUpperCase();
     if (!POLYGON_API_KEY) {
         console.error('POLYGON_API_KEY is not defined in environment variables.');
         throw new Error('API key missing');
@@ -96,6 +97,7 @@ export async function fetchOptionsOpenInterest(ticker: string, expirationDate?: 
  * and saves it to history.
  */
 export async function calculateAndSaveOptionsRatio(ticker: string = 'AAPL', dataFile: any = null, shouldSave: boolean = true): Promise<any> {
+    ticker = ticker.toUpperCase();
     try {
         // 1. Get Current Price
         const currentPrice = await fetchCurrentPrice(ticker);

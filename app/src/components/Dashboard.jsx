@@ -8,12 +8,12 @@ import MacroSummaryCard from './MacroSummaryCard';
 import HistoryTable from './HistoryTable';
 import MacroHistorySection from './MacroHistorySection';
 import MacroComparisonChart from './MacroComparisonChart';
-import OptionsSection from './OptionsSection';
-import OptionsHistorySection from './OptionsHistorySection';
+import OptionsTabContent from './OptionsTabContent';
 import AIInsight from './AIInsight';
 import MacroBetaSection from './MacroBetaSection';
 import AssetCorrelationSection from './AssetCorrelationSection';
 import StockVolumeChart from './StockVolumeChart';
+import Tabs from './Tabs';
 
 const Dashboard = () => {
     const [data, setData] = useState(null);
@@ -87,38 +87,52 @@ const Dashboard = () => {
         <div className="bg-slate-900 text-white font-sans min-h-screen p-6">
             <Header lastUpdated={data.generatedAtUtc} />
 
-            <main className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-                <FedWatchCard data={data.fedWatch} />
-                <VixCard data={data.vix} />
-                <FearGreedCard data={data.fearGreed} />
+            <Tabs tabs={[
+                {
+                    label: "Macro Overview",
+                    content: (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <FedWatchCard data={data.fedWatch} />
+                            <VixCard data={data.vix} />
+                            <FearGreedCard data={data.fearGreed} />
 
-                <MacroSummaryCard title="CPI (Inflation)" tag="Consumer" data={data.cpi} type="cpi" color="teal" />
-                <MacroSummaryCard title="PPI (Producer)" tag="Wholesale" data={data.ppi} type="ppi" color="cyan" />
-                <MacroSummaryCard title="Jobless Claims" tag="Labor" data={data.joblessClaims} type="claims" color="pink" />
+                            <MacroSummaryCard title="CPI (Inflation)" tag="Consumer" data={data.cpi} type="cpi" color="teal" />
+                            <MacroSummaryCard title="PPI (Producer)" tag="Wholesale" data={data.ppi} type="ppi" color="cyan" />
+                            <MacroSummaryCard title="Jobless Claims" tag="Labor" data={data.joblessClaims} type="claims" color="pink" />
 
-                <HistoryTable history={data.history} />
+                            <HistoryTable history={data.history} />
 
-                <MacroHistorySection title="CPI History (YoY)" data={data.cpi} valueLabel="Value (%)" color="teal" />
-                <MacroHistorySection title="PPI History (YoY)" data={data.ppi} valueLabel="Value (%)" color="cyan" />
-                <MacroHistorySection title="Jobless Claims History" data={data.joblessClaims} valueLabel="Initial Claims" color="pink" />
+                            <MacroHistorySection title="CPI History (YoY)" data={data.cpi} valueLabel="Value (%)" color="teal" />
+                            <MacroHistorySection title="PPI History (YoY)" data={data.ppi} valueLabel="Value (%)" color="cyan" />
+                            <MacroHistorySection title="Jobless Claims History" data={data.joblessClaims} valueLabel="Initial Claims" color="pink" />
 
-                <MacroComparisonChart
-                    cpiData={data.cpi}
-                    ppiData={data.ppi}
-                    claimsData={data.joblessClaims}
-                    sp500Data={data.sp500}
-                    onUpdateStock={handleUpdateStock}
-                />
+                            <MacroComparisonChart
+                                cpiData={data.cpi}
+                                ppiData={data.ppi}
+                                claimsData={data.joblessClaims}
+                                sp500Data={data.sp500}
+                                onUpdateStock={handleUpdateStock}
+                            />
 
-                <MacroBetaSection />
-                <AssetCorrelationSection />
-                <StockVolumeChart />
-
-                <OptionsSection />
-                <OptionsHistorySection />
-
-                <AIInsight insight={insight} />
-            </main>
+                            <AIInsight insight={insight} />
+                        </div>
+                    )
+                },
+                {
+                    label: "Analysis",
+                    content: (
+                        <div className="space-y-6">
+                            <MacroBetaSection />
+                            <AssetCorrelationSection />
+                            <StockVolumeChart />
+                        </div>
+                    )
+                },
+                {
+                    label: "Options",
+                    content: <OptionsTabContent />
+                }
+            ]} />
         </div>
     );
 };

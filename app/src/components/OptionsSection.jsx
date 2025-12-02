@@ -24,8 +24,7 @@ ChartJS.register(
     Legend
 );
 
-const OptionsSection = () => {
-    const [ticker, setTicker] = useState('SPY');
+const OptionsSection = ({ ticker }) => {
     const [dates, setDates] = useState([]);
     const [selectedDate, setSelectedDate] = useState('');
     const [allData, setAllData] = useState([]);
@@ -63,8 +62,10 @@ const OptionsSection = () => {
     };
 
     useEffect(() => {
-        fetchOptions('SPY');
-    }, []);
+        if (ticker) {
+            fetchOptions(ticker);
+        }
+    }, [ticker]);
 
     useEffect(() => {
         if (selectedDate && allData.length > 0) {
@@ -72,10 +73,6 @@ const OptionsSection = () => {
             setFilteredData(filtered);
         }
     }, [selectedDate, allData]);
-
-    const handleFetch = () => {
-        if (ticker) fetchOptions(ticker);
-    };
 
     // Process Data for Charts
     const { chartData, ratioChartData, tableData } = useMemo(() => {
@@ -198,13 +195,6 @@ const OptionsSection = () => {
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold text-slate-200">Options Open Interest</h2>
                     <div className="flex gap-2">
-                        <input
-                            type="text"
-                            placeholder="Ticker (e.g. SPY)"
-                            className="bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-32 p-2.5"
-                            value={ticker}
-                            onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                        />
                         <select
                             className="bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-2.5"
                             value={selectedDate}
@@ -212,13 +202,6 @@ const OptionsSection = () => {
                         >
                             {dates.length === 0 ? <option disabled>No dates found</option> : dates.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
-                        <button
-                            onClick={handleFetch}
-                            disabled={loading}
-                            className="text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm px-4 py-2 focus:outline-none disabled:opacity-50"
-                        >
-                            {loading ? 'Loading...' : 'Fetch'}
-                        </button>
                     </div>
                 </div>
                 <div className="h-96">
