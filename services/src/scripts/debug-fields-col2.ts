@@ -93,3 +93,5 @@ async function findFields(symbol: string) {
 
 findFields('AAPL');
 setTimeout(() => findFields('MSFT'), 2000);
+
+export {};

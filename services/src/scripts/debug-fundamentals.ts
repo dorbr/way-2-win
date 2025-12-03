@@ -44,3 +44,5 @@ async function testFetch(symbol: string) {
 }
 
 testFetch('AAPL');
+
+export {};

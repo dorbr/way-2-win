@@ -30,3 +30,5 @@ async function verifyForwardPE(symbol: string) {
 }
 
 verifyForwardPE('AAPL');
+
+export {};

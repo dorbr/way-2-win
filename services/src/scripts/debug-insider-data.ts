@@ -36,3 +36,5 @@ async function debugInsiderData(symbol: string) {
 
 debugInsiderData('AAPL');
 debugInsiderData('NVDA');
+
+export {};

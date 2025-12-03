@@ -37,3 +37,5 @@ async function testFetch() {
 }
 
 testFetch();
+
+export {};

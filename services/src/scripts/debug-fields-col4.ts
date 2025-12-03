@@ -56,3 +56,5 @@ async function findFields(symbol: string) {
 }
 
 findFields('AAPL');
+
+export {};
