@@ -7,6 +7,11 @@ const OptionsHistorySection = ({ ticker }) => {
     const [loading, setLoading] = useState(false);
 
     const fetchHistory = async (tickerToFetch) => {
+        if (!tickerToFetch) {
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         setHistory([]);
         try {
@@ -26,6 +31,8 @@ const OptionsHistorySection = ({ ticker }) => {
     useEffect(() => {
         if (ticker) {
             fetchHistory(ticker);
+        } else {
+            setHistory([]);
         }
     }, [ticker]);
 
@@ -67,12 +74,17 @@ const OptionsHistorySection = ({ ticker }) => {
                 </div>
             </div>
             <div className="h-96 relative">
-                {loading && (
+                {!ticker ? (
+                    <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                        Please enter a ticker to view history
+                    </div>
+                ) : loading ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 z-10 rounded-lg">
                         <div className="text-blue-400 font-semibold text-lg animate-pulse">Loading history...</div>
                     </div>
+                ) : (
+                    <Line data={chartData} options={options} />
                 )}
-                <Line data={chartData} options={options} />
             </div>
         </div>
     );

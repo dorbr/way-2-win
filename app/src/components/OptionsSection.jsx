@@ -32,6 +32,11 @@ const OptionsSection = ({ ticker }) => {
     const [loading, setLoading] = useState(false);
 
     const fetchOptions = async (tickerToFetch) => {
+        if (!tickerToFetch) {
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         setAllData([]);
         setFilteredData([]);
@@ -69,6 +74,11 @@ const OptionsSection = ({ ticker }) => {
     useEffect(() => {
         if (ticker) {
             fetchOptions(ticker);
+        } else {
+            setAllData([]);
+            setFilteredData([]);
+            setDates([]);
+            setSelectedDate('');
         }
     }, [ticker]);
 
@@ -204,18 +214,24 @@ const OptionsSection = ({ ticker }) => {
                             className="bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-2.5"
                             value={selectedDate}
                             onChange={(e) => setSelectedDate(e.target.value)}
+                            disabled={!ticker || loading}
                         >
                             {dates.length === 0 ? <option disabled>No dates found</option> : dates.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
                     </div>
                 </div>
                 <div className="h-96 relative">
-                    {loading && (
+                    {!ticker ? (
+                        <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                            Please enter a ticker to view options data
+                        </div>
+                    ) : loading ? (
                         <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 z-10 rounded-lg">
                             <div className="text-blue-400 font-semibold text-lg animate-pulse">Loading options data...</div>
                         </div>
+                    ) : (
+                        chartData && <Bar data={chartData} options={barOptions} />
                     )}
-                    {chartData && <Bar data={chartData} options={barOptions} />}
                 </div>
             </div>
 
@@ -253,12 +269,17 @@ const OptionsSection = ({ ticker }) => {
                         </table>
                     </div>
                     <div className="h-96 relative">
-                        {loading && (
+                        {!ticker ? (
+                            <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                                Please enter a ticker to view ratio data
+                            </div>
+                        ) : loading ? (
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 z-10 rounded-lg">
                                 <div className="text-blue-400 font-semibold text-lg animate-pulse">Loading ratio data...</div>
                             </div>
+                        ) : (
+                            ratioChartData && <Line data={ratioChartData} options={lineOptions} />
                         )}
-                        {ratioChartData && <Line data={ratioChartData} options={lineOptions} />}
                     </div>
                 </div>
             </div>

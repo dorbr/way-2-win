@@ -4,8 +4,8 @@ import OptionsSection from './OptionsSection';
 import OptionsHistorySection from './OptionsHistorySection';
 
 const OptionsTabContent = () => {
-    const [inputValue, setInputValue] = useState('SPY');
-    const [submittedTicker, setSubmittedTicker] = useState('SPY');
+    const [inputValue, setInputValue] = useState('');
+    const [submittedTicker, setSubmittedTicker] = useState('');
 
     const debouncedSetSubmittedTicker = React.useCallback(
         debounce((val) => {
