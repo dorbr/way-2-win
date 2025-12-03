@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { getStockData } from '../controllers/stock.controller';
+import { getStockData, getStockFundamentals } from '../controllers/stock.controller';
 
 const router = Router();
 
 router.get('/', getStockData);
+router.get('/fundamentals', getStockFundamentals);
 
 export default router;
