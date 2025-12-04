@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import CandlestickChart from './CandlestickChart';
+import ShillerHistoryTable from './ShillerHistoryTable';
 
 const StocksTabContent = () => {
     const [symbol, setSymbol] = useState('AAPL');
@@ -213,7 +214,13 @@ const StocksTabContent = () => {
                     )}
                 </div>
             </div>
+
+            {/* Market Context Section */}
+            <div className="grid grid-cols-1 gap-6">
+                <ShillerHistoryTable symbol={symbol} />
+            </div>
         </div>
+
 
     );
 };

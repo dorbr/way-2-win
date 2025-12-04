@@ -121,7 +121,7 @@ const MacroHistorySection = ({ title, data, valueLabel, color }) => {
                                         <td className="p-3 font-medium text-slate-200">
                                             {new Date(row.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                                         </td>
-                                        <td className="p-3">{row.value.toLocaleString()}</td>
+                                        <td className="p-3">{row.value != null ? row.value.toLocaleString() : '-'}</td>
                                     </tr>
                                 ))
                             )}

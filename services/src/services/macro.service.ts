@@ -13,6 +13,7 @@ interface MacroData {
         headlineMoM: number;
         releaseDate: string;
         history: FredObservation[];
+        indexHistory?: FredObservation[];
         isMock?: boolean;
     };
     ppi: {
@@ -20,6 +21,7 @@ interface MacroData {
         headlineMoM: number;
         releaseDate: string;
         history: FredObservation[];
+        indexHistory?: FredObservation[];
         isMock?: boolean;
     };
     joblessClaims: {
@@ -83,14 +85,17 @@ export async function fetchMacroData(): Promise<MacroData> {
         const [
             cpiYoYHist, cpiMoMHist,
             ppiYoYHist, ppiMoMHist,
-            claimsHist, claimsAvgHist
+            claimsHist, claimsAvgHist,
+            cpiIndexHist, ppiIndexHist
         ] = await Promise.all([
-            fetchFredSeries('CPIAUCSL', 'pc1', apiKey, 25), // YoY (Percent Change from Year Ago) - 2 Years
-            fetchFredSeries('CPIAUCSL', 'pch', apiKey, 25), // MoM (Percent Change)
-            fetchFredSeries('PPIFIS', 'pc1', apiKey, 25),   // YoY (Percent Change from Year Ago) - 2 Years
-            fetchFredSeries('PPIFIS', 'pch', apiKey, 25),   // MoM (Percent Change)
+            fetchFredSeries('CPIAUCSL', 'pc1', apiKey, 180), // YoY - 15 Years (Rate)
+            fetchFredSeries('CPIAUCSL', 'pch', apiKey, 180), // MoM
+            fetchFredSeries('PPIFIS', 'pc1', apiKey, 180),   // YoY - 15 Years (Rate)
+            fetchFredSeries('PPIFIS', 'pch', apiKey, 180),   // MoM
             fetchFredSeries('ICSA', 'lin', apiKey, 104),    // Initial Claims (2 years)
-            fetchFredSeries('IC4WSA', 'lin', apiKey, 104)   // 4-Week Avg (2 years)
+            fetchFredSeries('IC4WSA', 'lin', apiKey, 104),   // 4-Week Avg (2 years)
+            fetchFredSeries('CPIAUCSL', 'lin', apiKey, 180), // CPI Index (Levels)
+            fetchFredSeries('PPIFIS', 'lin', apiKey, 180)    // PPI Index (Levels)
         ]);
 
         // Helper to get latest
@@ -109,6 +114,7 @@ export async function fetchMacroData(): Promise<MacroData> {
                 headlineMoM: cpiMoM.value,
                 releaseDate: cpiYoY.date,
                 history: cpiYoYHist, // Array of { value, date }
+                indexHistory: cpiIndexHist,
                 isMock: false
             },
             ppi: {
@@ -116,6 +122,7 @@ export async function fetchMacroData(): Promise<MacroData> {
                 headlineMoM: ppiMoM.value,
                 releaseDate: ppiYoY.date,
                 history: ppiYoYHist,
+                indexHistory: ppiIndexHist,
                 isMock: false
             },
             joblessClaims: {
@@ -160,6 +167,7 @@ function getMockMacroData(): MacroData {
             headlineMoM: 0.2,
             releaseDate: "2025-10-14",
             history: generateHistory(3.2, 13, 30),
+            indexHistory: generateHistory(300, 13, 30), // Mock Index ~300
             isMock: true
         },
         ppi: {
@@ -167,6 +175,7 @@ function getMockMacroData(): MacroData {
             headlineMoM: 0.1,
             releaseDate: "2025-10-15",
             history: generateHistory(2.1, 13, 30),
+            indexHistory: generateHistory(250, 13, 30), // Mock Index ~250
             isMock: true
         },
         joblessClaims: {

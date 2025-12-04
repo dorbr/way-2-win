@@ -14,6 +14,7 @@ import MacroBetaSection from './MacroBetaSection';
 import AssetCorrelationSection from './AssetCorrelationSection';
 import StockVolumeChart from './StockVolumeChart';
 import StocksTabContent from './StocksTabContent';
+import EarningsTabContent from './EarningsTabContent';
 import Tabs from './Tabs';
 
 const Dashboard = () => {
@@ -136,6 +137,10 @@ const Dashboard = () => {
                 {
                     label: "Options",
                     content: <OptionsTabContent />
+                },
+                {
+                    label: "Earnings",
+                    content: <EarningsTabContent />
                 }
             ]} />
         </div>

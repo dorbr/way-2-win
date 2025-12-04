@@ -7,6 +7,8 @@ import optionsRoutes from './routes/options.routes';
 import analysisRoutes from './routes/analysis.routes';
 import tickerRoutes from './routes/ticker.routes';
 import macroRoutes from './routes/macro.routes';
+import shillerRoutes from './routes/shiller.routes';
+import earningsRoutes from './routes/earnings.routes';
 
 const app = express();
 
@@ -20,6 +22,8 @@ app.use('/api/options', optionsRoutes);
 app.use('/api/analyze', analysisRoutes);
 app.use('/api/tickers', tickerRoutes);
 app.use('/api/macro', macroRoutes);
+app.use('/api/shiller', shillerRoutes);
+app.use('/api/earnings', earningsRoutes);
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../../app/dist/index.html'));
