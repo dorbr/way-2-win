@@ -15,16 +15,16 @@ const VixCard = ({ data }) => {
             <div className="grid grid-cols-2 gap-4 text-center">
                 <div className="bg-slate-800 p-3 rounded-lg">
                     <div className="text-xs text-slate-400 mb-1">Open</div>
-                    <div className="text-xl font-bold">{data.todayOpen.toFixed(2)}</div>
+                    <div className="text-xl font-bold">{typeof data.todayOpen === 'number' ? data.todayOpen.toFixed(2) : '-'}</div>
                 </div>
                 <div className="bg-slate-800 p-3 rounded-lg">
                     <div className="text-xs text-slate-400 mb-1">Close/Latest</div>
-                    <div className="text-xl font-bold text-purple-400">{data.todayClose.toFixed(2)}</div>
+                    <div className="text-xl font-bold text-purple-400">{typeof data.todayClose === 'number' ? data.todayClose.toFixed(2) : '-'}</div>
                 </div>
             </div>
             <div className="mt-4 flex justify-between items-center text-sm">
                 <span className="text-slate-400">Previous Close</span>
-                <span className="font-medium">{data.previousClose.toFixed(2)}</span>
+                <span className="font-medium">{typeof data.previousClose === 'number' ? data.previousClose.toFixed(2) : '-'}</span>
             </div>
         </div>
     );

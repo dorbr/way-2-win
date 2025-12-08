@@ -1,16 +1,14 @@
-
 import axios from 'axios';
 import { fetchStockData } from './sp500.service';
 import { fetchMacroData } from './macro.service';
 
-const pkg = require('yahoo-finance2');
-const yahooFinance = new pkg.default();
+const POLYGON_API_KEY = process.env.POLYGON_API_KEY || 'MISSING';
+const BASE_URL = 'https://api.polygon.io';
 
 interface ShillerDataPoint {
     date: string;
     value: number;
 }
-
 interface EarningsDataPoint {
     date: Date;
     value: number;
@@ -47,7 +45,7 @@ export async function fetchShillerPEHistory(symbol: string = '^GSPC'): Promise<S
         } else {
             console.log(`[Shiller] Fetching data for stock: ${symbol}`);
             // Stock Specific Logic
-            // 1. Fetch Earnings History from Yahoo Finance
+            // 1. Fetch Earnings History from Polygon
             earnings = await fetchStockEarningsHistory(symbol);
             console.log(`[Shiller] Fetched ${earnings.length} earnings records for ${symbol}`);
 
@@ -57,6 +55,7 @@ export async function fetchShillerPEHistory(symbol: string = '^GSPC'): Promise<S
             console.log(`[Shiller] Fetched ${cpiHistory.length} CPI records`);
 
             // 3. Fetch Stock Price History (Max available, monthly)
+            // fetchStockData is already using Polygon
             const stockData = await fetchStockData(symbol, '1mo', 'max');
             prices = stockData.history;
 
@@ -65,15 +64,7 @@ export async function fetchShillerPEHistory(symbol: string = '^GSPC'): Promise<S
             for (const p of prices) {
                 const d = new Date(p.date);
                 const key = `${d.getFullYear()}-${d.getMonth()}`;
-                // Since prices are sorted by date, later entries will overwrite earlier ones
-                // But wait, fetchStockData sorts by date.
-                // If we have Dec 1 and Dec 3, Dec 3 comes later.
-                // We want to keep Dec 3? Or Dec 1?
-                // Yahoo 1mo candle usually starts at the 1st.
-                // The "current" candle might be dated today.
-                // Let's keep the one that looks like a month start if possible, or just the last one?
-                // Actually, for a history chart, we usually want the month close.
-                // So the latest date in the month is better if it represents the update.
+
                 uniquePrices.set(key, p);
             }
             prices = Array.from(uniquePrices.values());
@@ -124,7 +115,7 @@ export async function fetchShillerPEHistory(symbol: string = '^GSPC'): Promise<S
 
             // Check time span covered
             if (window.length < 2) {
-                console.log(`[Shiller] Window too short: ${window.length}`);
+                // console.log(`[Shiller] Window too short: ${window.length}`);
                 return null;
             }
 
@@ -134,7 +125,7 @@ export async function fetchShillerPEHistory(symbol: string = '^GSPC'): Promise<S
 
             // Relaxed constraint: Allow ~1 year of history (e.g. 4 quarters)
             if (yearsCovered < 0.7) {
-                console.log(`[Shiller] Years covered too short: ${yearsCovered.toFixed(2)}`);
+                // console.log(`[Shiller] Years covered too short: ${yearsCovered.toFixed(2)}`);
                 return null;
             }
 
@@ -281,74 +272,46 @@ async function fetchRealEarnings(): Promise<EarningsDataPoint[]> {
 
 async function fetchStockEarningsHistory(symbol: string): Promise<EarningsDataPoint[]> {
     try {
-        const result = await yahooFinance.quoteSummary(symbol, {
-            modules: ['earningsHistory', 'earnings', 'defaultKeyStatistics']
-        });
-
-        let data: EarningsDataPoint[] = [];
-        const sharesOutstanding = result.defaultKeyStatistics?.sharesOutstanding;
-
-        // 1. Fetch Quarterly EPS History (usually last 4 quarters)
-        // This contains 'epsActual' which is the correct historical EPS.
-        const quarterlyHistory = result.earningsHistory?.history || [];
-        const quarterlyEPS = quarterlyHistory.map((h: any) => ({
-            date: new Date(h.quarter),
-            value: h.epsActual
-        })).filter((d: any) => !isNaN(d.value) && !isNaN(d.date.getTime()));
-
-        // 2. Fetch Annual Earnings (Net Income) -> EPS Approximation
-        // This gives us ~4 years of history usually.
-        let annualEPS: EarningsDataPoint[] = [];
-        if (sharesOutstanding && result.earnings && result.earnings.financialsChart && result.earnings.financialsChart.yearly) {
-            const annual = result.earnings.financialsChart.yearly;
-            annualEPS = annual.map((h: any) => ({
-                date: new Date(h.date, 11, 31), // Year end (Approx)
-                value: h.earnings / sharesOutstanding // Approx EPS
-            })).filter((d: any) => !isNaN(d.value));
+        if (POLYGON_API_KEY === 'MISSING') {
+            return [];
         }
 
-        // 3. Merge Strategies
-        // Use Quarterly for recent data (more accurate).
-        // Use Annual for older data (more history).
-        // Filter out Annual points that are covered by Quarterly points.
-        // We assume Quarterly covers the most recent year(s).
+        // Fetch Financials from Polygon (up to 100 which is 25 years quarterly, plenty)
+        // Endpoint: /vX/reference/financials
+        const url = `${BASE_URL}/vX/reference/financials?ticker=${symbol.toUpperCase()}&limit=50&sort=period_of_report_date&apiKey=${POLYGON_API_KEY}`;
 
-        // Find the earliest date in Quarterly data
-        let earliestQuarterly = new Date(8640000000000000); // Max date
-        if (quarterlyEPS.length > 0) {
-            earliestQuarterly = quarterlyEPS.reduce((min: Date, p: any) => p.date < min ? p.date : min, quarterlyEPS[0].date);
+        const response = await axios.get(url);
+        const results = response.data.results;
+
+        if (!results || results.length === 0) {
+            console.log(`[Shiller] No financials found for ${symbol} in Polygon`);
+            return [];
         }
 
-        // Filter Annual: Keep only those strictly before the earliest Quarterly date (minus some buffer?)
-        // Actually, Annual date is set to Dec 31.
-        // If Quarterly starts Jan 2025. Annual 2024 (Dec 31 2024) is before Jan 2025.
-        // So we keep Annual 2024.
-        // But Annual 2024 covers 2024. Quarterly starts 2025. No overlap. Good.
-        // If Quarterly starts Oct 2024. Annual 2024 (Dec 31) is after Oct 2024.
-        // But Annual 2024 covers the whole year 2024.
-        // If we have partial quarterly for 2024, should we use Annual 2024 instead?
-        // Or mix them?
-        // Mixing is hard because Annual is a sum.
-        // Simple heuristic: If we have ANY quarterly data for a year, ignore the Annual data for that year.
+        const financials = results;
 
-        const quarterlyYears = new Set(quarterlyEPS.map((d: any) => d.date.getFullYear()));
-        const filteredAnnual = annualEPS.filter((d: any) => !quarterlyYears.has(d.date.getFullYear()));
+        // Map to EarningsDataPoint
+        // We use basic_earnings_per_share
+        const data: EarningsDataPoint[] = financials.map((f: any) => {
+            const val = f.financials?.income_statement?.basic_earnings_per_share?.value;
+            const dateStr = f.end_date || f.period_of_report_date; // Use end of period
 
-        const combined = [...filteredAnnual, ...quarterlyEPS];
+            if (val !== undefined && dateStr) {
+                return {
+                    date: new Date(dateStr),
+                    value: val
+                };
+            }
+            return null;
+        }).filter((d: any) => d !== null);
 
         // Sort by date
-        combined.sort((a, b) => a.date.getTime() - b.date.getTime());
+        data.sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
 
-        if (combined.length > 0) {
-            console.log(`[Shiller] Using hybrid earnings: ${filteredAnnual.length} annual + ${quarterlyEPS.length} quarterly for ${symbol}`);
-            return combined;
-        }
-
-        console.log(`[Shiller] No earnings found for ${symbol}`);
-        return [];
+        return data;
 
     } catch (error) {
-        console.error(`Error fetching earnings history for ${symbol}:`, error);
+        console.error(`Error fetching earnings history (Polygon) for ${symbol}:`, error);
         return [];
     }
 }

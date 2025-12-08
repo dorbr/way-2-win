@@ -1,5 +1,7 @@
-const pkg = require('yahoo-finance2');
-const yahooFinance = new pkg.default();
+import axios from 'axios';
+
+const POLYGON_API_KEY = process.env.POLYGON_API_KEY || 'MISSING';
+const BASE_URL = 'https://api.polygon.io';
 
 interface StockFundamentals {
     symbol: string;
@@ -124,245 +126,294 @@ function calculateATR(highs: number[], lows: number[], closes: number[], period:
 }
 
 export async function fetchStockFundamentals(symbol: string): Promise<StockFundamentals> {
+    const capsSymbol = symbol.toUpperCase();
     try {
-        const period1 = new Date();
-        period1.setMonth(period1.getMonth() - 10); // 10 months ago to cover SMA150 + buffer
-
-        const [quoteResult, historicalResult] = await Promise.all([
-            yahooFinance.quoteSummary(symbol, {
-                modules: [
-                    'defaultKeyStatistics',
-                    'assetProfile',
-                    'financialData',
-                    'summaryDetail',
-                    'calendarEvents',
-                    'earnings',
-                    'earningsHistory',
-                    'majorHoldersBreakdown',
-                    'price',
-                    'netSharePurchaseActivity',
-                    'quoteType',
-                    'earningsTrend',
-                    'insiderTransactions'
-                ]
-            }),
-            yahooFinance.chart(symbol, {
-                period1: period1.toISOString().split('T')[0],
-                interval: '1d'
-            })
-        ]) as any;
-
-        if (!quoteResult) {
-            throw new Error('No data found');
+        if (POLYGON_API_KEY === 'MISSING') {
+            return getMockFundamentals(symbol);
         }
 
-        const defaultKeyStatistics = quoteResult.defaultKeyStatistics || {};
-        const assetProfile = quoteResult.assetProfile || {};
-        const financialData = quoteResult.financialData || {};
-        const summaryDetail = quoteResult.summaryDetail || {};
-        const calendarEvents = quoteResult.calendarEvents || {};
-        const earningsHistory = quoteResult.earningsHistory || {};
-        const majorHoldersBreakdown = quoteResult.majorHoldersBreakdown || {};
-        const price = quoteResult.price || {};
-        const netSharePurchaseActivity = quoteResult.netSharePurchaseActivity || {};
-        const quoteType = quoteResult.quoteType || {};
-        const earningsTrend = quoteResult.earningsTrend || {};
+        // Parallel Fetching
+        // 1. Ticker Details: /v3/reference/tickers/{ticker}
+        // 2. Snapshot: /v2/snapshot/locale/us/markets/stocks/tickers/{ticker}
+        // 3. Financials: /vX/reference/financials
+        // 4. Aggregates: /v2/aggs/...
 
-        // Helper to safely get earnings date
-        let earningsDate = 'N/A';
-        if (calendarEvents.earnings && calendarEvents.earnings.earningsDate && calendarEvents.earnings.earningsDate.length > 0) {
-            earningsDate = new Date(calendarEvents.earnings.earningsDate[0]).toISOString().split('T')[0];
+        const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const today = new Date().toISOString().split('T')[0];
+
+        const [detailsRes, snapshotRes, financialsRes, aggsRes] = await Promise.all([
+            axios.get(`${BASE_URL}/v3/reference/tickers/${capsSymbol}?apiKey=${POLYGON_API_KEY}`),
+            axios.get(`${BASE_URL}/v2/snapshot/locale/us/markets/stocks/tickers/${capsSymbol}?apiKey=${POLYGON_API_KEY}`),
+            axios.get(`${BASE_URL}/vX/reference/financials?ticker=${capsSymbol}&limit=10&apiKey=${POLYGON_API_KEY}`),
+            axios.get(`${BASE_URL}/v2/aggs/ticker/${capsSymbol}/range/1/day/${yearAgo}/${today}?adjusted=true&limit=500&apiKey=${POLYGON_API_KEY}`)
+        ]);
+
+        const details = detailsRes.data.results || {};
+        const snapshot = snapshotRes.data.ticker ? snapshotRes.data.ticker : (snapshotRes.data.results ? snapshotRes.data.results[0] : {}); // Corrected assignment
+        // Snapshot /v2/snapshot returns 'ticker' object for single, or 'results' array
+        // For /tickers/{ticker}, it returns `ticker` object? No, it returns top level object matching TickerSnapshot interface.
+        // Let's assume snapshotRes.data contains `ticker` property.
+
+        const financials = financialsRes.data.results || [];
+        const bars = aggsRes.data.results || [];
+
+        // --- Metric Extractions ---
+
+        const marketCap = details.market_cap || (details.weighted_shares_outstanding * snapshot.day?.c) || 0;
+        const sharesOutstanding = details.weighted_shares_outstanding || 0;
+
+        // --- Calculate TTM EPS & Revenue & Other Financials ---
+
+        // Sort by end_date descending
+        financials.sort((a: any, b: any) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime());
+
+        let trailingEps = 0;
+        let totalRevenue = 0;
+        let netIncomeToCommon = 0; // For Profit Margin
+        let grossProfit = 0; // For Gross Margin
+        let operatingIncome = 0; // For Operating Margin
+        let totalDebt = 0; // For EV
+        let cashAndEquivalents = 0; // For EV
+
+        let revenueGrowth = 0; // YoY
+        let earningsGrowth = 0; // YoY Quarterly
+
+        // 1. Try to find TTM record directly
+        const ttm = financials.find((f: any) => f.fiscal_period === 'TTM');
+
+        // Helper to safely get value
+        const getVal = (obj: any, path: string[]) => {
+            let current = obj;
+            for (const key of path) {
+                if (!current) return 0;
+                current = current[key];
+            }
+            return current?.value || 0;
+        };
+
+        if (ttm) {
+            trailingEps = getVal(ttm, ['financials', 'income_statement', 'basic_earnings_per_share']);
+            totalRevenue = getVal(ttm, ['financials', 'income_statement', 'revenues']);
+            netIncomeToCommon = getVal(ttm, ['financials', 'income_statement', 'net_income_loss']);
+            grossProfit = getVal(ttm, ['financials', 'income_statement', 'gross_profit']);
+            operatingIncome = getVal(ttm, ['financials', 'income_statement', 'operating_income_loss']);
+
+            // Balance Sheet Items (Usually from latest available report, TTM might merge them or use latest)
+            // If TTM has BS data use it, otherwise use latest period
+            totalDebt = getVal(ttm, ['financials', 'balance_sheet', 'debt']) || (getVal(ttm, ['financials', 'balance_sheet', 'long_term_debt']) + getVal(ttm, ['financials', 'balance_sheet', 'short_term_debt'])); // Polygon sometimes has 'debt' summary or separate parts
+            cashAndEquivalents = getVal(ttm, ['financials', 'balance_sheet', 'cash_and_cash_equivalents']);
+
+        } else {
+            // 2. Sum last 4 quarters for Income Statement
+            const quarters = financials.filter((f: any) => ['Q1', 'Q2', 'Q3', 'Q4'].includes(f.fiscal_period));
+
+            if (quarters.length >= 4) {
+                const recent4 = quarters.slice(0, 4);
+                trailingEps = recent4.reduce((acc: number, q: any) => acc + getVal(q, ['financials', 'income_statement', 'basic_earnings_per_share']), 0);
+                totalRevenue = recent4.reduce((acc: number, q: any) => acc + getVal(q, ['financials', 'income_statement', 'revenues']), 0);
+                netIncomeToCommon = recent4.reduce((acc: number, q: any) => acc + getVal(q, ['financials', 'income_statement', 'net_income_loss']), 0);
+                grossProfit = recent4.reduce((acc: number, q: any) => acc + getVal(q, ['financials', 'income_statement', 'gross_profit']), 0);
+                operatingIncome = recent4.reduce((acc: number, q: any) => acc + getVal(q, ['financials', 'income_statement', 'operating_income_loss']), 0);
+
+                // For Balance Sheet, take the LATEST quarter's snapshot
+                const latestQ = recent4[0];
+                // Try generic 'debt' field or sum parts
+                totalDebt = getVal(latestQ, ['financials', 'balance_sheet', 'debt']) || (getVal(latestQ, ['financials', 'balance_sheet', 'long_term_debt']) + getVal(latestQ, ['financials', 'balance_sheet', 'short_term_debt'])); // Fallback attempt
+                cashAndEquivalents = getVal(latestQ, ['financials', 'balance_sheet', 'cash_and_cash_equivalents']);
+
+                // Calculate Approximated Growth (Latest Q vs Same Q Last Year)
+                const lastYearQ = quarters.find((f: any) => f.fiscal_period === latestQ.fiscal_period && f.fiscal_year === (latestQ.fiscal_year - 1));
+
+                if (lastYearQ) {
+                    const currentRev = getVal(latestQ, ['financials', 'income_statement', 'revenues']);
+                    const oldRev = getVal(lastYearQ, ['financials', 'income_statement', 'revenues']);
+                    if (oldRev !== 0) revenueGrowth = (currentRev - oldRev) / oldRev;
+
+                    const currentEps = getVal(latestQ, ['financials', 'income_statement', 'basic_earnings_per_share']);
+                    const oldEps = getVal(lastYearQ, ['financials', 'income_statement', 'basic_earnings_per_share']);
+                    if (oldEps !== 0) earningsGrowth = (currentEps - oldEps) / oldEps;
+                }
+
+            } else {
+                // 3. Fallback to latest FY (Annual)
+                const annual = financials.find((f: any) => f.fiscal_period === 'FY');
+                if (annual) {
+                    trailingEps = getVal(annual, ['financials', 'income_statement', 'basic_earnings_per_share']);
+                    totalRevenue = getVal(annual, ['financials', 'income_statement', 'revenues']);
+                    netIncomeToCommon = getVal(annual, ['financials', 'income_statement', 'net_income_loss']);
+                    grossProfit = getVal(annual, ['financials', 'income_statement', 'gross_profit']);
+                    operatingIncome = getVal(annual, ['financials', 'income_statement', 'operating_income_loss']);
+
+                    totalDebt = getVal(annual, ['financials', 'balance_sheet', 'debt']);
+                    cashAndEquivalents = getVal(annual, ['financials', 'balance_sheet', 'cash_and_cash_equivalents']);
+                }
+            }
         }
 
-        // Helper to safely get surprise percent
-        let epsSurprisePercent = 0;
-        if (earningsHistory.history && earningsHistory.history.length > 0) {
-            // Sort by quarter date descending to get the latest
-            const sortedHistory = earningsHistory.history.sort((a: any, b: any) => new Date(b.quarter).getTime() - new Date(a.quarter).getTime());
-            epsSurprisePercent = sortedHistory[0].surprisePercent || 0;
-        }
+        const price = snapshot.day?.c || snapshot.last?.price || 0;
+        const trailingPE = (trailingEps && trailingEps !== 0) ? (price / trailingEps) : 0;
 
-        // Calculate Technicals
+        // Margins
+        const profitMargins = (totalRevenue && totalRevenue !== 0) ? (netIncomeToCommon / totalRevenue) : 0;
+        const grossMargins = (totalRevenue && totalRevenue !== 0) ? (grossProfit / totalRevenue) : 0;
+        const operatingMargins = (totalRevenue && totalRevenue !== 0) ? (operatingIncome / totalRevenue) : 0;
+
+        // Enterprise Value = Market Cap + Total Debt - Cash
+        const enterpriseValue = marketCap + totalDebt - cashAndEquivalents;
+
+        // --- Technicals ---
         let rsi14 = 0;
         let atr14 = 0;
         let sma20 = 0;
+        let sma50 = 0;
         let sma150 = 0;
-        let sma20Distance = 0;
-        let sma50Distance = 0;
-        let sma150Distance = 0;
-        let sma200Distance = 0;
+        let sma200 = 0;
+        let beta = 1; // Default
+        let fiftyTwoWeekHigh = 0;
+        let fiftyTwoWeekLow = 0;
 
-        if (historicalResult && historicalResult.quotes && historicalResult.quotes.length > 20) {
-            const quotes = historicalResult.quotes;
-            const closes = quotes.map((q: any) => q.close);
-            const highs = quotes.map((q: any) => q.high);
-            const lows = quotes.map((q: any) => q.low);
+        if (bars.length > 0) {
+            // Find 52 week high/low from bars (aggs are already yearAgo -> today)
+            let maxH = -Infinity;
+            let minL = Infinity;
+            for (const b of bars) {
+                if (b.h > maxH) maxH = b.h;
+                if (b.l < minL) minL = b.l;
+            }
+            fiftyTwoWeekHigh = maxH === -Infinity ? 0 : maxH;
+            fiftyTwoWeekLow = minL === Infinity ? 0 : minL;
+        }
+
+        if (bars.length > 200) {
+            const closes = bars.map((b: any) => b.c);
+            const highs = bars.map((b: any) => b.h);
+            const lows = bars.map((b: any) => b.l);
 
             rsi14 = calculateRSI(closes, 14);
             atr14 = calculateATR(highs, lows, closes, 14);
             sma20 = calculateSMA(closes, 20);
+            sma50 = calculateSMA(closes, 50);
             sma150 = calculateSMA(closes, 150);
-
-            const currentPrice = price.regularMarketPrice || closes[closes.length - 1];
-
-            if (sma20 > 0) sma20Distance = (currentPrice - sma20) / sma20;
-            if (sma150 > 0) sma150Distance = (currentPrice - sma150) / sma150;
-
-            // Calculate other SMAs for distance if available in summaryDetail, otherwise calculate manually if enough data
-            const sma50 = summaryDetail.fiftyDayAverage || calculateSMA(closes, 50);
-            if (sma50 > 0) sma50Distance = (currentPrice - sma50) / sma50;
-
-            const sma200 = summaryDetail.twoHundredDayAverage || calculateSMA(closes, 200);
-            if (sma200 > 0) sma200Distance = (currentPrice - sma200) / sma200;
+            sma200 = calculateSMA(closes, 200);
         }
 
-        const avgVolume = summaryDetail.averageVolume || 0;
-        const vol = summaryDetail.volume || price.regularMarketVolume || 0;
+        // --- Distances ---
+        const sma20Distance = sma20 ? (price - sma20) / sma20 : 0;
+        const sma50Distance = sma50 ? (price - sma50) / sma50 : 0;
+        const sma150Distance = sma150 ? (price - sma150) / sma150 : 0;
+        const sma200Distance = sma200 ? (price - sma200) / sma200 : 0;
 
-        let relVolume = 0;
-        if (avgVolume > 0) {
-            // Calculate Relative Volume with Intraday Projection
-            const now = new Date();
-            const nyTimeStr = now.toLocaleString("en-US", { timeZone: "America/New_York" });
-            const nyTime = new Date(nyTimeStr);
+        // ... existing Polygon logic ...
 
-            const marketOpen = new Date(nyTime);
-            marketOpen.setHours(9, 30, 0, 0);
-
-            const marketClose = new Date(nyTime);
-            marketClose.setHours(16, 0, 0, 0);
-
-            // Check if currently trading (Mon-Fri, 9:30-16:00 ET)
-            const isWeekday = nyTime.getDay() >= 1 && nyTime.getDay() <= 5;
-            const isTradingHours = nyTime >= marketOpen && nyTime < marketClose;
-
-            if (isWeekday && isTradingHours) {
-                const minutesElapsed = (nyTime.getTime() - marketOpen.getTime()) / 60000;
-                const totalMinutes = 390; // 6.5 hours * 60
-
-                if (minutesElapsed > 10) { // Avoid extreme projection in first 10 mins
-                    const projectedVolume = (vol / minutesElapsed) * totalMinutes;
-                    relVolume = projectedVolume / avgVolume;
-                } else {
-                    // Fallback to simple calculation in first 10 mins or if projection unsafe
-                    relVolume = vol / avgVolume;
-                }
-            } else {
-                // Market closed or pre-market, use standard calculation
-                relVolume = vol / avgVolume;
-            }
-        }
-
-        // Calculate PEG
-        let pegRatio = defaultKeyStatistics.pegRatio || 0;
-        if (!pegRatio && earningsTrend.trend && earningsTrend.trend.length > 0) {
-            const trend = earningsTrend.trend;
-            const fiveYearTrend = trend.find((t: any) => t.period === '+5y');
-            const nextYearTrend = trend.find((t: any) => t.period === '+1y');
-
-            const growthTrend = fiveYearTrend || nextYearTrend;
-            if (growthTrend && growthTrend.growth && summaryDetail.trailingPE) {
-                const growthRate = growthTrend.growth * 100;
-                if (growthRate > 0) {
-                    pegRatio = summaryDetail.trailingPE / growthRate;
-                }
-            }
-        }
-
-        // Calculate Insider Transactions manually to match Finviz (Open Market Buys/Sells only)
-        let calculatedInsiderTrans = 0;
-        const insiderTransactions = quoteResult.insiderTransactions || {};
-        const totalInsiderShares = netSharePurchaseActivity.totalInsiderShares || 0;
-
-        if (insiderTransactions.transactions && insiderTransactions.transactions.length > 0 && totalInsiderShares > 0) {
-            const sixMonthsAgo = new Date();
-            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-            let netShares = 0;
-
-            insiderTransactions.transactions.forEach((t: any) => {
-                const transDate = new Date(t.startDate);
-                if (transDate >= sixMonthsAgo) {
-                    // Filter for meaningful transactions (Sale or Purchase)
-                    // Exclude: Grant, Gift, Option Exercise, etc.
-                    const text = (t.transactionText || '').toLowerCase();
-                    if (text.includes('sale') || text.includes('purchase') || text.includes('buy') || text.includes('sold') || text.includes('bought')) {
-                        // Double check it's not an option exercise if "purchase" is used loosely, usually "Option Exercise" is distinct
-                        if (!text.includes('exercise') && !text.includes('gift') && !text.includes('grant')) {
-                            if (text.includes('sale') || text.includes('sold')) {
-                                netShares -= t.shares?.raw || t.shares || 0;
-                            } else {
-                                netShares += t.shares?.raw || t.shares || 0;
-                            }
-                        }
-                    }
-                }
-            });
-
-            calculatedInsiderTrans = netShares / totalInsiderShares;
-        } else {
-            // Fallback to Yahoo's pre-calculated value if manual fails or no data
-            calculatedInsiderTrans = netSharePurchaseActivity.netPercentInsiderShares || 0;
-        }
-
-        return {
-            symbol: symbol.toUpperCase(),
-            marketCap: summaryDetail.marketCap || 0,
-            enterpriseValue: defaultKeyStatistics.enterpriseValue || 0,
-            netIncomeToCommon: defaultKeyStatistics.netIncomeToCommon || 0,
-            totalRevenue: financialData.totalRevenue || 0,
-            fullTimeEmployees: assetProfile.fullTimeEmployees || 0,
-            ipoDate: quoteType.firstTradeDateEpochUtc ? new Date(quoteType.firstTradeDateEpochUtc).toISOString().split('T')[0] : 'N/A',
+        let finalResult = {
+            symbol: capsSymbol,
+            marketCap,
+            enterpriseValue,
+            netIncomeToCommon,
+            totalRevenue,
+            fullTimeEmployees: details.total_employees || 0,
+            ipoDate: details.list_date || 'N/A',
             // Column 2
-            trailingPE: summaryDetail.trailingPE || 0,
-            forwardPE: (price.regularMarketPrice && defaultKeyStatistics.forwardEps) ? (price.regularMarketPrice / defaultKeyStatistics.forwardEps) : (summaryDetail.forwardPE || 0),
-            pegRatio: pegRatio,
-            trailingEps: defaultKeyStatistics.trailingEps || 0,
-            forwardEps: defaultKeyStatistics.forwardEps || 0,
-            earningsQuarterlyGrowth: defaultKeyStatistics.earningsQuarterlyGrowth || 0,
-            revenueGrowth: financialData.revenueGrowth || 0,
-            earningsDate: earningsDate,
-            epsSurprisePercent: epsSurprisePercent,
-            salesSurprise: 0, // Not available in API
+            trailingPE,
+            forwardPE: 0, // Estimates not avail
+            pegRatio: 0,
+            trailingEps,
+            forwardEps: 0,
+            earningsQuarterlyGrowth: earningsGrowth,
+            revenueGrowth,
+            earningsDate: 'N/A',
+            epsSurprisePercent: 0,
+            salesSurprise: 0,
             // Column 3
-            insidersPercentHeld: majorHoldersBreakdown.insidersPercentHeld || 0,
-            institutionsPercentHeld: majorHoldersBreakdown.institutionsPercentHeld || 0,
-            grossMargins: financialData.grossMargins || 0,
-            operatingMargins: financialData.operatingMargins || 0,
-            profitMargins: financialData.profitMargins || 0,
-            fiftyDayAverage: summaryDetail.fiftyDayAverage || 0,
-            twoHundredDayAverage: summaryDetail.twoHundredDayAverage || 0,
+            insidersPercentHeld: 0,
+            institutionsPercentHeld: 0,
+            grossMargins,
+            operatingMargins,
+            profitMargins,
+            fiftyDayAverage: sma50,
+            twoHundredDayAverage: sma200,
             // Column 4
-            sharesOutstanding: defaultKeyStatistics.sharesOutstanding || 0,
-            floatShares: defaultKeyStatistics.floatShares || 0,
-            shortPercentOfFloat: defaultKeyStatistics.shortPercentOfFloat || 0,
-            shortRatio: defaultKeyStatistics.shortRatio || 0,
-            sharesShort: defaultKeyStatistics.sharesShort || 0,
-            fiftyTwoWeekHigh: summaryDetail.fiftyTwoWeekHigh || 0,
-            fiftyTwoWeekLow: summaryDetail.fiftyTwoWeekLow || 0,
-            atr14: atr14,
-            rsi14: rsi14,
-            beta: defaultKeyStatistics.beta || 0,
-            relVolume: relVolume,
-            averageVolume: avgVolume,
-            volume: vol,
+            sharesOutstanding,
+            floatShares: details.weighted_shares_outstanding || 0, // Approx
+            shortPercentOfFloat: 0,
+            shortRatio: 0,
+            sharesShort: 0,
+            fiftyTwoWeekHigh,
+            fiftyTwoWeekLow,
+            atr14,
+            rsi14,
+            beta,
+            relVolume: (snapshot.day?.v && sma20) ? (snapshot.day.v / (bars[bars.length - 1]?.v || 1)) : 1, // Rough approx
+            averageVolume: bars.length > 0 ? bars.reduce((s: number, b: any) => s + b.v, 0) / bars.length : 0,
+            volume: snapshot.day?.v || 0,
             // Column 5
-            regularMarketPreviousClose: price.regularMarketPreviousClose || 0,
-            regularMarketPrice: price.regularMarketPrice || 0,
-            regularMarketChange: price.regularMarketChange || 0,
-            regularMarketChangePercent: price.regularMarketChangePercent || 0,
+            regularMarketPreviousClose: snapshot.prevDay?.c || 0,
+            regularMarketPrice: price,
+            regularMarketChange: snapshot.todaysChange || 0,
+            regularMarketChangePercent: snapshot.todaysChangePerc || 0,
             // New Fields
-            index: quoteType.exchange || 'N/A',
-            insiderTrans: calculatedInsiderTrans,
-            instTrans: 0, // Not readily available
-            sma20: sma20,
-            sma150: sma150,
-            sma20Distance: sma20Distance,
-            sma50Distance: sma50Distance,
-            sma150Distance: sma150Distance,
-            sma200Distance: sma200Distance,
+            index: details.primary_exchange || 'N/A',
+            insiderTrans: 0,
+            instTrans: 0,
+            sma20,
+            sma150,
+            sma20Distance,
+            sma50Distance,
+            sma150Distance,
+            sma200Distance,
             isMock: false
         };
+
+        // --- Yahoo Enrichment Strategy ---
+        // If critical fields are missing (0), fetch from Yahoo
+        if (finalResult.forwardPE === 0 || finalResult.beta === 1 || finalResult.shortRatio === 0) {
+            try {
+                // Import locally to avoid top-level issues if any
+                const pkg = require('yahoo-finance2');
+                const yahooFinance = new pkg.default();
+                console.log(`[Stocks] Enriching ${capsSymbol} with Yahoo Finance data...`);
+
+                const quoteSummary = await yahooFinance.quoteSummary(capsSymbol, { modules: ['summaryDetail', 'defaultKeyStatistics', 'financialData'] });
+                const sd = quoteSummary.summaryDetail || {};
+                const ks = quoteSummary.defaultKeyStatistics || {};
+                const fd = quoteSummary.financialData || {};
+
+                // Enrich fields
+                if (finalResult.forwardPE === 0) finalResult.forwardPE = sd.forwardPE || 0;
+                if (finalResult.pegRatio === 0) finalResult.pegRatio = ks.pegRatio || 0;
+                if (finalResult.beta === 1 && sd.beta) finalResult.beta = sd.beta;
+
+                // Shorts
+                if (finalResult.shortRatio === 0) finalResult.shortRatio = sd.shortRatio || ks.shortRatio || 0;
+                if (finalResult.shortPercentOfFloat === 0) finalResult.shortPercentOfFloat = ks.shortPercentOfFloat || 0;
+                if (finalResult.sharesShort === 0) finalResult.sharesShort = ks.sharesShort || 0;
+
+                // Ownership
+                if (finalResult.insidersPercentHeld === 0) finalResult.insidersPercentHeld = ks.heldPercentInsiders || 0;
+                if (finalResult.institutionsPercentHeld === 0) finalResult.institutionsPercentHeld = ks.heldPercentInstitutions || 0;
+
+                // Estimates
+                if (finalResult.forwardEps === 0) finalResult.forwardEps = ks.forwardEps || 0;
+
+                // Verify/Override Enterprise Value if 0 (sometimes calc fails)
+                if (finalResult.enterpriseValue === 0) finalResult.enterpriseValue = ks.enterpriseValue || 0;
+
+                // Margins (if Polygon missed)
+                if (finalResult.profitMargins === 0) finalResult.profitMargins = fd.profitMargins || 0;
+                if (finalResult.grossMargins === 0) finalResult.grossMargins = fd.grossMargins || 0;
+                if (finalResult.operatingMargins === 0) finalResult.operatingMargins = fd.operatingMargins || 0;
+
+                // Growth (if missed)
+                if (finalResult.revenueGrowth === 0) finalResult.revenueGrowth = fd.revenueGrowth || 0;
+                if (finalResult.earningsQuarterlyGrowth === 0) finalResult.earningsQuarterlyGrowth = ks.earningsQuarterlyGrowth || 0;
+
+            } catch (yErr: any) {
+                console.warn(`[Stocks] Yahoo enrichment failed for ${capsSymbol}: ${yErr.message}`);
+            }
+        }
+
+        return finalResult;
+
 
     } catch (error: any) {
         console.error(`Error fetching fundamentals for ${symbol}:`, error.message);

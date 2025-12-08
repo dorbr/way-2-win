@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/db';
-import { getEarningsData } from '../services/earnings.service';
+import { getEarningsData, getFinancialStatements } from '../services/earnings.service';
 
 export const getUpcomingEarnings = async (req: Request, res: Response) => {
     try {
@@ -30,5 +30,20 @@ export const getUpcomingEarnings = async (req: Request, res: Response) => {
     } catch (error) {
         console.error('Error in getUpcomingEarnings:', error);
         res.status(500).json({ error: 'Failed to fetch earnings data' });
+    }
+}
+
+export const getFinancials = async (req: Request, res: Response) => {
+    try {
+        const { symbol } = req.params;
+        if (!symbol) {
+            return res.status(400).json({ error: 'Symbol is required' });
+        }
+
+        const financials = await getFinancialStatements(symbol);
+        res.json(financials);
+    } catch (error) {
+        console.error('Error in getFinancials:', error);
+        res.status(500).json({ error: 'Failed to fetch financial statements' });
     }
 };

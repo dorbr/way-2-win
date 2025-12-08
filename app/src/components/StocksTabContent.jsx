@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import CandlestickChart from './CandlestickChart';
 import ShillerHistoryTable from './ShillerHistoryTable';
+import EarningsModal from './EarningsModal';
 
 const StocksTabContent = () => {
     const [symbol, setSymbol] = useState('AAPL');
@@ -9,6 +10,7 @@ const StocksTabContent = () => {
     const [fundamentals, setFundamentals] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false);
 
     const fetchStockData = async (ticker) => {
         setLoading(true);
@@ -64,6 +66,14 @@ const StocksTabContent = () => {
                         disabled={loading}
                     >
                         {loading ? 'Loading...' : 'Search'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setIsEarningsModalOpen(true)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium transition-colors ml-2"
+                        disabled={loading}
+                    >
+                        Show Earnings
                     </button>
                 </form>
             </div>
@@ -219,6 +229,12 @@ const StocksTabContent = () => {
             <div className="grid grid-cols-1 gap-6">
                 <ShillerHistoryTable symbol={symbol} />
             </div>
+
+            <EarningsModal
+                isOpen={isEarningsModalOpen}
+                onClose={() => setIsEarningsModalOpen(false)}
+                symbol={symbol}
+            />
         </div>
 
 
