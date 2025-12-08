@@ -50,31 +50,33 @@ const StocksTabContent = () => {
 
     return (
         <div className="p-4 text-white space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold">Stocks Analysis</h2>
-                <form onSubmit={handleSubmit} className="flex gap-2">
+                <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <input
                         type="text"
                         value={symbol}
                         onChange={(e) => setSymbol(e.target.value.toUpperCase())}
                         placeholder="Enter Symbol (e.g., AAPL)"
-                        className="bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded focus:outline-none focus:border-blue-500"
+                        className="bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded focus:outline-none focus:border-blue-500 w-full sm:w-64"
                     />
-                    <button
-                        type="submit"
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition-colors"
-                        disabled={loading}
-                    >
-                        {loading ? 'Loading...' : 'Search'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setIsEarningsModalOpen(true)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium transition-colors ml-2"
-                        disabled={loading}
-                    >
-                        Show Earnings
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            type="submit"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition-colors flex-1 sm:flex-none justify-center"
+                            disabled={loading}
+                        >
+                            {loading ? 'Loading...' : 'Search'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsEarningsModalOpen(true)}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium transition-colors ml-0 sm:ml-2 flex-1 sm:flex-none justify-center"
+                            disabled={loading}
+                        >
+                            Show Earnings
+                        </button>
+                    </div>
                 </form>
             </div>
 
@@ -86,7 +88,7 @@ const StocksTabContent = () => {
 
             <div className="grid grid-cols-1 gap-6">
                 {/* Chart Section */}
-                <div className="bg-slate-900 rounded-lg shadow-lg">
+                <div className="bg-slate-900 rounded-lg shadow-lg mb-4">
                     {stockData && stockData.history && stockData.history.length > 0 ? (
                         <div className="p-4">
                             <div className="flex items-center justify-between mb-4">
@@ -98,10 +100,12 @@ const StocksTabContent = () => {
                                     <p className="text-2xl font-bold">${stockData.history[0].close.toFixed(2)}</p>
                                 </div>
                             </div>
-                            <CandlestickChart data={stockData.history} />
+                            <div className="min-h-[300px] h-[300px] sm:h-auto">
+                                <CandlestickChart data={stockData.history} />
+                            </div>
                         </div>
                     ) : (
-                        <div className="h-[500px] flex items-center justify-center text-slate-500">
+                        <div className="h-[300px] flex items-center justify-center text-slate-500">
                             {loading ? 'Loading chart...' : 'No data available'}
                         </div>
                     )}
@@ -109,12 +113,12 @@ const StocksTabContent = () => {
 
                 {/* Data Table Placeholder */}
                 {/* Data Table */}
-                <div className="bg-slate-800 rounded-lg shadow-lg border border-slate-700 overflow-hidden">
+                <div className="bg-slate-800 rounded-lg shadow-lg border border-slate-700 overflow-hidden mt-4">
                     <div className="p-4 border-b border-slate-700">
                         <h3 className="text-lg font-semibold">Fundamentals</h3>
                     </div>
                     {fundamentals ? (
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm p-4">
                             {/* Column 1 */}
                             <div className="space-y-0.5">
                                 <MetricRow label="Index" value={fundamentals.index} />

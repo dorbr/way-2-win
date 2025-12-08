@@ -281,14 +281,14 @@ const EarningsModal = ({ isOpen, onClose, symbol }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col border border-slate-700">
                 {/* Header */}
-                <div className="flex items-center justify-between p-5 border-b border-slate-700 bg-slate-800 rounded-t-xl">
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <div className="relative flex flex-col md:flex-row items-center justify-between p-5 pr-14 border-b border-slate-700 bg-slate-800 rounded-t-xl gap-4">
+                    <h2 className="text-2xl font-bold text-white flex items-center gap-2 self-start md:self-center pr-10">
                         Financials <span className="text-slate-500">|</span> <span className="text-blue-400">{symbol}</span>
                     </h2>
 
-                    <div className="flex items-center gap-6">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full md:w-auto mt-2 md:mt-0">
                         {/* History Slider */}
-                        <div className="flex flex-col gap-1 w-48">
+                        <div className="flex flex-col gap-1 w-full sm:w-48">
                             <div className="flex justify-between text-xs text-slate-400">
                                 <span>History</span>
                                 <span className="text-blue-400 font-mono">{historyCount} Periods</span>
@@ -303,14 +303,14 @@ const EarningsModal = ({ isOpen, onClose, symbol }) => {
                             />
                         </div>
 
-                        {/* Divider */}
-                        <div className="h-8 w-px bg-slate-700"></div>
+                        {/* Divider - Hide on very small screens if stacked vertical, show on sm */}
+                        <div className="hidden sm:block h-8 w-px bg-slate-700"></div>
 
                         {/* Toggle */}
-                        <div className="flex bg-slate-700/50 rounded-lg p-1 border border-slate-600">
+                        <div className="flex bg-slate-700/50 rounded-lg p-1 border border-slate-600 w-full sm:w-auto">
                             <button
                                 onClick={() => setViewType('annual')}
-                                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${viewType === 'annual'
+                                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all flex-1 sm:flex-none ${viewType === 'annual'
                                     ? 'bg-blue-500 text-white shadow-sm'
                                     : 'text-slate-400 hover:text-slate-200'
                                     }`}
@@ -319,7 +319,7 @@ const EarningsModal = ({ isOpen, onClose, symbol }) => {
                             </button>
                             <button
                                 onClick={() => setViewType('quarterly')}
-                                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${viewType === 'quarterly'
+                                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all flex-1 sm:flex-none ${viewType === 'quarterly'
                                     ? 'bg-blue-500 text-white shadow-sm'
                                     : 'text-slate-400 hover:text-slate-200'
                                     }`}
@@ -327,25 +327,26 @@ const EarningsModal = ({ isOpen, onClose, symbol }) => {
                                 Quarterly
                             </button>
                         </div>
-
-                        <button
-                            onClick={onClose}
-                            className="text-slate-400 hover:text-white transition-colors p-1 hover:bg-slate-700 rounded-full"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
                     </div>
+
+                    {/* Close Button - Absolute Position Top Right */}
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors p-1 hover:bg-slate-700 rounded-full"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-slate-700 bg-slate-800/50">
+                <div className="flex border-b border-slate-700 bg-slate-800/50 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`px-6 py-4 text-sm font-semibold transition-all relative ${activeTab === tab.id
+                            className={`px-6 py-4 text-sm font-semibold transition-all relative flex-shrink-0 ${activeTab === tab.id
                                 ? 'text-blue-400'
                                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30'
                                 }`}
