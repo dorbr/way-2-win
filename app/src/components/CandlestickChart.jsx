@@ -17,11 +17,11 @@ const CandlestickChart = ({ data, colors = {} }) => {
     useEffect(() => {
         if (!chartContainerRef.current) return;
 
-        const handleResize = () => {
-            if (chartRef.current) {
-                chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth });
-            }
-        };
+        const resizeObserver = new ResizeObserver(entries => {
+            if (entries.length === 0 || !entries[0].contentRect) return;
+            const { width, height } = entries[0].contentRect;
+            chart.applyOptions({ width, height });
+        });
 
         const chart = createChart(chartContainerRef.current, {
             layout: {
@@ -29,7 +29,7 @@ const CandlestickChart = ({ data, colors = {} }) => {
                 textColor: textColor,
             },
             width: chartContainerRef.current.clientWidth,
-            height: 500,
+            height: chartContainerRef.current.clientHeight,
             grid: {
                 vertLines: { color: '#334155' }, // slate-700
                 horzLines: { color: '#334155' },
@@ -87,16 +87,16 @@ const CandlestickChart = ({ data, colors = {} }) => {
         candlestickSeries.setData(candleData);
         volumeSeries.setData(volumeData);
 
-        window.addEventListener('resize', handleResize);
+        resizeObserver.observe(chartContainerRef.current);
 
         return () => {
-            window.removeEventListener('resize', handleResize);
+            resizeObserver.disconnect();
             chart.remove();
         };
     }, [data, backgroundColor, textColor, upColor, downColor, wickUpColor, wickDownColor]);
 
     return (
-        <div ref={chartContainerRef} className="w-full h-[500px] rounded-lg overflow-hidden border border-slate-700 shadow-lg" />
+        <div ref={chartContainerRef} className="w-full h-full rounded-lg overflow-hidden border border-slate-700 shadow-lg" />
     );
 };
 

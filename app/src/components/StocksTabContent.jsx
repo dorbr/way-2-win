@@ -100,12 +100,12 @@ const StocksTabContent = () => {
                                     <p className="text-2xl font-bold">${stockData.history[0].close.toFixed(2)}</p>
                                 </div>
                             </div>
-                            <div className="min-h-[300px] h-[300px] sm:h-auto">
+                            <div className="min-h-[450px] h-[450px] sm:h-[500px]">
                                 <CandlestickChart data={stockData.history} />
                             </div>
                         </div>
                     ) : (
-                        <div className="h-[300px] flex items-center justify-center text-slate-500">
+                        <div className="h-[450px] sm:h-[500px] flex items-center justify-center text-slate-500">
                             {loading ? 'Loading chart...' : 'No data available'}
                         </div>
                     )}
