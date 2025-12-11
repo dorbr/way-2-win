@@ -15,6 +15,7 @@ import AssetCorrelationSection from './AssetCorrelationSection';
 import StockVolumeChart from './StockVolumeChart';
 import StocksTabContent from './StocksTabContent';
 import EarningsTabContent from './EarningsTabContent';
+import InsidersTabContent from './InsidersTabContent';
 import Tabs from './Tabs';
 
 const Dashboard = () => {
@@ -141,6 +142,10 @@ const Dashboard = () => {
                 {
                     label: "Earnings",
                     content: <EarningsTabContent />
+                },
+                {
+                    label: "Insiders & Institutionals",
+                    content: <InsidersTabContent />
                 }
             ]} />
         </div>

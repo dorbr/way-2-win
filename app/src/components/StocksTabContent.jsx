@@ -97,7 +97,7 @@ const StocksTabContent = () => {
                                     <p className="text-slate-400 text-sm">Daily Chart</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-2xl font-bold">${stockData.history[0].close.toFixed(2)}</p>
+                                    <p className="text-2xl font-bold">${(stockData.close || stockData.history[stockData.history.length - 1].close).toFixed(2)}</p>
                                 </div>
                             </div>
                             <div className="min-h-[450px] h-[450px] sm:h-[500px]">

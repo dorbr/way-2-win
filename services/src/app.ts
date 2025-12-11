@@ -9,6 +9,7 @@ import tickerRoutes from './routes/ticker.routes';
 import macroRoutes from './routes/macro.routes';
 import shillerRoutes from './routes/shiller.routes';
 import earningsRoutes from './routes/earnings.routes';
+import insidersRoutes from './routes/insiders.routes';
 
 const app = express();
 
@@ -24,6 +25,10 @@ app.use('/api/tickers', tickerRoutes);
 app.use('/api/macro', macroRoutes);
 app.use('/api/shiller', shillerRoutes);
 app.use('/api/earnings', earningsRoutes);
+// app.use('/api/sp500', sp500Routes); // Not implemented yet
+// app.use('/api/vix', vixRoutes); // Not implemented yet
+// app.use('/api/stocks', stocksRoutes); // Not implemented yet
+app.use('/api/insiders', insidersRoutes);
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../../app/dist/index.html'));

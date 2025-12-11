@@ -1,7 +1,7 @@
-import { fetchStockData, fetchCurrentPrice } from '../services/sp500.service';
-import { fetchVIXData } from '../services/vix.service';
-import { fetchStockFundamentals } from '../services/stocks.service';
-import { fetchShillerPEHistory } from '../services/shiller.service';
+import { fetchStockData, fetchCurrentPrice } from '../../services/sp500.service';
+import { fetchVIXData } from '../../services/vix.service';
+import { fetchStockFundamentals } from '../../services/stocks.service';
+import { fetchShillerPEHistory } from '../../services/shiller.service';
 
 // Mock env if needed or ensure it's loaded by the runner (ts-node usually loads .env if configured, but we might need dotenv)
 import dotenv from 'dotenv';

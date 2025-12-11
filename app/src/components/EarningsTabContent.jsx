@@ -97,7 +97,9 @@ const EarningsTabContent = () => {
                                         {groupedEarnings[date].map((item, index) => (
                                             <tr key={index} className="border-b border-slate-700 hover:bg-slate-700/30 transition-colors last:border-0">
                                                 <td className="px-6 py-4 font-bold text-white text-lg">{item.symbol}</td>
-                                                {item.epsEstimate != null ? `$${item.epsEstimate.toFixed(2)}` : '-'}
+                                                <td className="px-6 py-4 font-medium">
+                                                    {item.epsEstimate != null ? `$${item.epsEstimate.toFixed(2)}` : '-'}
+                                                </td>
                                                 <td className="px-6 py-4 font-medium">
                                                     {formatNumber(item.revenueEstimate)}
                                                 </td>
