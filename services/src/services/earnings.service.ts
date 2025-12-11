@@ -13,56 +13,124 @@ export interface EarningsData {
 }
 
 export const getEarningsData = async (tickers: string[]): Promise<EarningsData[]> => {
-    // Polygon doesn't provide upcoming earnings in the free tier easily.
-    // Switching to Yahoo Finance 'calendarEvents' module.
+    // 1. Check Cache
+    const CACHE_duration_minutes = 24 * 60; // 24 hours
+    const now = new Date();
+    const cacheCutoff = new Date(now.getTime() - CACHE_duration_minutes * 60 * 1000);
 
+    // Fetch valid cache entries
+    const cachedData = await prisma.earningsCache.findMany({
+        where: {
+            symbol: { in: tickers },
+            lastUpdated: { gt: cacheCutoff }
+        }
+    });
+
+    // Filter out cached items that are "valid" but physically in the past (e.g. yesterday's earnings)
+    // We want to re-fetch these to get the *next* date.
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const validCachedData = cachedData.filter(c => {
+        // If it's a "no data" record (null date), it's valid (subject to 24h TTL only)
+        if (!c.earningsDate) return true;
+        // If it has a date, it must be today or future
+        return new Date(c.earningsDate) >= startOfToday;
+    });
+
+    const cachedSymbols = new Set(validCachedData.map(c => c.symbol));
+    const symbolsToFetch = tickers.filter(t => !cachedSymbols.has(t));
+
+    // If all cached and valid, we still fall through to ensure consistent return format and filtering
+
+    // 2. Fetch missing/stale data from Yahoo Finance
     const chunk = 5;
-    const results: EarningsData[] = [];
+    const fetchedResults: EarningsData[] = [];
 
-    // Lazy load yahoo-finance2 to avoid top-level await/initialization issues if any
+    // Lazy load yahoo-finance2
     const pkg = require('yahoo-finance2');
     const yahooFinance = new pkg.default();
-
-    // Helper to sleep
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    for (let i = 0; i < tickers.length; i += chunk) {
-        const batch = tickers.slice(i, i + chunk);
+    for (let i = 0; i < symbolsToFetch.length; i += chunk) {
+        const batch = symbolsToFetch.slice(i, i + chunk);
         const promises = batch.map(async (symbol) => {
             try {
-                // Add a small random jitter to avoid hitting exact same millisecond
                 await sleep(Math.floor(Math.random() * 500));
 
-                const quoteSummary = await yahooFinance.quoteSummary(symbol, { modules: ['calendarEvents'] });
-                const earnings = quoteSummary.calendarEvents?.earnings;
-
-                if (!earnings) {
-                    return null; // Will be filtered out
+                let quoteSummary;
+                try {
+                    quoteSummary = await yahooFinance.quoteSummary(symbol, { modules: ['calendarEvents'] });
+                } catch (e: any) {
+                    // If specific "No fundamentals" error, we cache as empty.
+                    // Otherwise (network, etc) we return null without caching so it retries next time.
+                    if (e.message && e.message.includes('No fundamentals data found')) {
+                        // Cache as empty
+                        await prisma.earningsCache.upsert({
+                            where: { symbol },
+                            update: { earningsDate: null, epsEstimate: null, revenueEstimate: null, quoteType: 'N/A', lastUpdated: new Date() },
+                            create: { symbol, earningsDate: null, epsEstimate: null, revenueEstimate: null, quoteType: 'N/A', lastUpdated: new Date() }
+                        }).catch(err => console.error(`Failed to cache empty earnings for ${symbol}`, err));
+                        return null;
+                    }
+                    throw e; // Rethrow to outer catch
                 }
 
-                // Yahoo returns earningsDate as an array of dates (range) or single date
-                // We'll take the first one.
-                let dateStr = null;
-                if (earnings.earningsDate && earnings.earningsDate.length > 0) {
+                const earnings = quoteSummary.calendarEvents?.earnings;
+                let dateStr: string | null = null;
+                let dateObj: Date | null = null;
+
+                if (earnings && earnings.earningsDate && earnings.earningsDate.length > 0) {
                     const d = new Date(earnings.earningsDate[0]);
-                    // Check if date is in the future (or at least today)
                     if (d >= new Date()) {
                         dateStr = d.toISOString();
+                        dateObj = d;
                     }
                 }
 
-                if (!dateStr) return null; // Filter out if no future date
+                // If no valid future date found, cache as empty
+                if (!dateStr) {
+                    await prisma.earningsCache.upsert({
+                        where: { symbol },
+                        update: { earningsDate: null, epsEstimate: null, revenueEstimate: null, quoteType: 'EQUITY', lastUpdated: new Date() },
+                        create: { symbol, earningsDate: null, epsEstimate: null, revenueEstimate: null, quoteType: 'EQUITY', lastUpdated: new Date() }
+                    }).catch(err => console.error(`Failed to cache empty earnings for ${symbol}`, err));
+                    return null;
+                }
 
-                return {
+                const data: EarningsData = {
                     symbol,
                     earningsDate: dateStr,
-                    epsEstimate: earnings.earningsAverage || null,
-                    revenueEstimate: earnings.revenueAverage || null,
-                    quoteType: 'EQUITY' // Yahoo doesn't explicitly give type here easily, default to Equity
+                    epsEstimate: earnings?.earningsAverage || null,
+                    revenueEstimate: earnings?.revenueAverage || null,
+                    quoteType: 'EQUITY'
                 };
+
+                // Upsert valid data into Cache
+                await prisma.earningsCache.upsert({
+                    where: { symbol },
+                    update: {
+                        earningsDate: dateObj,
+                        epsEstimate: data.epsEstimate,
+                        revenueEstimate: data.revenueEstimate,
+                        quoteType: data.quoteType,
+                        lastUpdated: new Date()
+                    },
+                    create: {
+                        symbol,
+                        earningsDate: dateObj,
+                        epsEstimate: data.epsEstimate,
+                        revenueEstimate: data.revenueEstimate,
+                        quoteType: data.quoteType,
+                        lastUpdated: new Date()
+                    }
+                }).catch(err => console.error(`Failed to cache earnings for ${symbol}`, err));
+
+                return data;
+
             } catch (e: any) {
-                // Suppress "No fundamentals data found" which is common for ETFs/Funds
                 if (e.message && !e.message.includes('No fundamentals data found')) {
+                    // Real error, log it and return null (don't cache so we retry)
                     console.error(`Error fetching earnings for ${symbol} from Yahoo:`, e.message);
                 }
                 return null;
@@ -70,14 +138,27 @@ export const getEarningsData = async (tickers: string[]): Promise<EarningsData[]
         });
 
         const batchResults = await Promise.all(promises);
-        results.push(...(batchResults.filter(r => r !== null) as EarningsData[]));
+        fetchedResults.push(...(batchResults.filter(r => r !== null) as EarningsData[]));
 
-        // Wait between chunks to be polite to Yahoo
-        if (i + chunk < tickers.length) {
+        if (i + chunk < symbolsToFetch.length) {
             await sleep(2000);
         }
     }
-    return results;
+
+    // Combine cached and freshly fetched data
+    const finalResults: EarningsData[] = [
+        ...validCachedData.map(c => ({
+            symbol: c.symbol,
+            earningsDate: c.earningsDate ? c.earningsDate.toISOString() : null,
+            epsEstimate: c.epsEstimate,
+            revenueEstimate: c.revenueEstimate,
+            quoteType: c.quoteType
+        })),
+        ...fetchedResults
+    ];
+
+    // Filter out items with no earnings date (cached misses)
+    return finalResults.filter(item => item.earningsDate !== null);
 };
 
 export const getFinancialStatements = async (symbol: string) => {

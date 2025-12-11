@@ -38,3 +38,15 @@ model OptionsRatioHistory {
   @@index([tickerId, timestamp])
   @@map("options_ratio_history")
 }
+
+model EarningsCache {
+  id              Int       @id @default(autoincrement())
+  symbol          String    @unique
+  earningsDate    DateTime?
+  epsEstimate     Float?
+  revenueEstimate Float?
+  quoteType       String
+  lastUpdated     DateTime  @default(now()) @map("last_updated")
+
+  @@map("earnings_cache")
+}
